@@ -4,7 +4,8 @@
 # COPY ./packages and COPY ./package.json paths resolve correctly.
 #
 # Render's Docker health check probes the container on port 10000, so both
-# services are told to listen on PORT=10000.
+# services listen on PORT=10000. The API's liveness endpoint (no DB needed)
+# is /api/v1/health.
 
 services:
   - type: web
@@ -13,7 +14,7 @@ services:
     rootDir: .
     dockerfilePath: ./apps/api/Dockerfile
     plan: free
-    healthCheckPath: /api/v1/health/liveness
+    healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
         value: production
