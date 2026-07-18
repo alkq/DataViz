@@ -2,6 +2,9 @@
 # Deploy: Render dashboard -> New -> Blueprint -> select this repo.
 # Root directory for BOTH is the repo root ('.') so the Dockerfiles'
 # COPY ./packages and COPY ./package.json paths resolve correctly.
+#
+# Render's Docker health check probes the container on port 10000, so both
+# services are told to listen on PORT=10000.
 
 services:
   - type: web
@@ -15,7 +18,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: "3001"
+        value: "10000"
       - key: JWT_SECRET
         generateValue: true
       # Paste your Neon connection string (DB name = dataviz) in the dashboard.
@@ -35,7 +38,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      # Paste your Railway/Render API URL, MUST include /api/v1, e.g.
+      - key: PORT
+        value: "10000"
+      # Paste your API URL, MUST include /api/v1, e.g.
       # https://dataviz-api.onrender.com/api/v1
       - key: NEXT_PUBLIC_API_URL
         sync: false
