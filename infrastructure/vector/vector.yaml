@@ -1,0 +1,104 @@
+# Vector Configuration for ClickHouse Ingestion
+# Enterprise-Grade Data Visualization Platform
+
+# Data sources
+sources:
+  # Kafka source for telemetry data ingestion
+  kafka_telemetry:
+    type: kafka
+    bootstrap_servers: "dv-kafka:29092"
+    group_id: "vector-telemetry-consumer"
+    topics:
+      - "device_telemetry"
+    deserializer:
+      type: json
+    batch:
+      max_size: 10485760
+      timeout: 1
+
+  # Health check endpoint
+  health_check:
+    type: http_server
+    address: "0.0.0.0:8686"
+
+# Transforms
+transforms:
+  # Parse and validate telemetry data
+  parse_telemetry:
+    type: remap
+    inputs:
+      - "kafka_telemetry"
+    source: |
+      # Validate required fields
+      if !exists(.timestamp) {
+        ., error("missing timestamp")
+      } else if !exists(.tenant_id) {
+        ., error("missing tenant_id")
+      } else if !exists(.device_id) {
+        ., error("missing device_id")
+      } else if !exists(.metric_name) {
+        ., error("missing metric_name")
+      } else if !exists(.metric_value) {
+        ., error("missing metric_value")
+      }
+
+      # Convert timestamp to proper format
+      .timestamp = toDateTime64(., 3, "UTC")
+
+  # Add derived fields
+  enrich_telemetry:
+    type: remap
+    inputs:
+      - "parse_telemetry"
+    source: |
+      # Add ingestion timestamp
+      .ingested_at = now()
+
+      # Ensure metric_name is lowercase
+      .metric_name = lower(.metric_name)
+
+# Sinks
+sinks:
+  # ClickHouse sink for raw telemetry
+  clickhouse_telemetry:
+    type: clickhouse
+    inputs:
+      - "enrich_telemetry"
+    endpoint: "http://dv-clickhouse:8123"
+    database: "industrial_analytics"
+    table: "device_telemetry"
+    auth:
+      strategy: basic
+      username: "dataviz"
+      password: "dataviz_secure_password"
+    compression: gzip
+    batch:
+      max_size: 10485760
+      timeout: 5
+    healthcheck: true
+
+  # ClickHouse sink for device metadata updates
+  clickhouse_metadata:
+    type: clickhouse
+    inputs:
+      - "enrich_telemetry"
+    endpoint: "http://clickhouse:8123"
+    database: "industrial_analytics"
+    table: "device_metadata"
+    auth:
+      strategy: basic
+      username: "dataviz"
+      password: "dataviz_secure_password"
+    compression: gzip
+    batch:
+      max_size: 10485760
+      timeout: 5
+    healthcheck: true
+
+  # Console sink for debugging
+  console:
+    type: console
+    inputs:
+      - "enrich_telemetry"
+    encoding:
+      codec: json

@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@data-viz/shared": ["packages/shared/src"],
+      "@data-viz/db": ["packages/db/src"],
+      "@data-viz/api": ["apps/api/src"],
+      "@data-viz/web": ["apps/web/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build"]
+}

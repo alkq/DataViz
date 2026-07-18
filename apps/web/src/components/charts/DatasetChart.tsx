@@ -1,0 +1,113 @@
+'use client';
+
+import React, { useEffect, useRef, useMemo } from 'react';
+import * as echarts from 'echarts';
+import { useTheme } from 'next-themes';
+
+type Row = Record<string, unknown>;
+type ChartType = 'line' | 'bar';
+
+interface DatasetChartProps {
+  rows: Row[];
+  xColumn: string;
+  yColumn: string;
+  chartType: ChartType;
+}
+
+function toNumber(v: unknown): number {
+  if (v === null || v === undefined || v === '') return NaN;
+  const n = typeof v === 'number' ? v : Number(String(v).replace(/,/g, ''));
+  return isNaN(n) ? NaN : n;
+}
+
+export function DatasetChart({ rows, xColumn, yColumn, chartType }: DatasetChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<echarts.ECharts | null>(null);
+  const { theme = 'light' } = useTheme();
+
+  const { points, xIsNumeric } = useMemo(() => {
+    const pts = rows
+      .map((r) => ({ x: r[xColumn], y: toNumber(r[yColumn]) }))
+      .filter((p) => !isNaN(p.y));
+    const numericX = pts.length > 0 && pts.every((p) => !isNaN(toNumber(p.x)));
+    return { points: pts, xIsNumeric: numericX };
+  }, [rows, xColumn, yColumn]);
+
+  const chartOptions = useMemo(() => {
+    const isDark = theme === 'dark';
+    const textColor = isDark ? '#e2e8f0' : '#475569';
+    const gridColor = isDark ? '#334155' : '#e2e8f0';
+    const axisColor = isDark ? '#64748b' : '#94a3b8';
+
+    const seriesData = points.map((p) => {
+      const xv = xIsNumeric ? toNumber(p.x) : String(p.x);
+      return [xv, p.y];
+    });
+
+    return {
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', backgroundColor: isDark ? '#1e293b' : '#fff', borderColor: gridColor, textStyle: { color: textColor } },
+      grid: { left: 70, right: 30, top: 20, bottom: 70 },
+      xAxis: {
+        type: xIsNumeric ? 'value' : 'category',
+        data: xIsNumeric ? undefined : points.map((p) => String(p.x)),
+        axisLine: { lineStyle: { color: axisColor } },
+        axisLabel: { color: textColor, fontSize: 11, hideOverlap: true },
+        splitLine: { show: false },
+        name: xColumn,
+        nameLocation: 'middle',
+        nameGap: 38,
+        nameTextStyle: { color: textColor },
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: axisColor } },
+        axisLabel: { color: textColor, fontSize: 12 },
+        splitLine: { lineStyle: { color: gridColor, type: 'dashed' } },
+        name: yColumn,
+        nameTextStyle: { color: textColor },
+      },
+      series: [
+        {
+          name: yColumn,
+          type: chartType,
+          data: seriesData,
+          showSymbol: chartType === 'line' ? points.length <= 60 : false,
+          sampling: 'lttb',
+          smooth: chartType === 'line',
+          itemStyle: { color: '#3b82f6' },
+          lineStyle: { color: '#3b82f6', width: 2 },
+          areaStyle: chartType === 'line' ? { color: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)' } : undefined,
+        },
+      ],
+      animationDuration: 300,
+    };
+  }, [points, xIsNumeric, xColumn, yColumn, chartType, theme]);
+
+  useEffect(() => {
+    if (!chartRef.current) return;
+    const chart = echarts.init(chartRef.current, theme);
+    chartInstanceRef.current = chart;
+    chart.setOption(chartOptions);
+    const handleResize = () => chartInstanceRef.current?.resize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chartInstanceRef.current?.dispose();
+      chartInstanceRef.current = null;
+    };
+  }, [chartOptions, theme]);
+
+  if (points.length === 0) {
+    return <div className="text-center text-gray-500 py-12">No numeric data to plot for the selected columns.</div>;
+  }
+
+  return (
+    <div
+      ref={chartRef}
+      style={{ width: '100%', height: '420px' }}
+      role="img"
+      aria-label={`${chartType} chart of ${yColumn} by ${xColumn}`}
+    />
+  );
+}

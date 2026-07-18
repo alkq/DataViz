@@ -1,0 +1,30 @@
+# Railway deployment config for the NestJS API.
+# Builds the image from the existing apps/api/Dockerfile.
+# Set these as Railway *variables* (or reference Railway-provided service vars)
+# in the Railway dashboard / `railway variables` CLI — DO NOT commit secrets.
+
+[build]
+builder = "dockerfile"
+dockerfile = "apps/api/Dockerfile"
+# Railway injects the build context as the repo root, so the Dockerfile's
+# COPY paths (./packages, ./apps, ./package.json) resolve correctly.
+
+[deploy]
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+# Env vars Railway will set at runtime. The values here are names only;
+# set the real values in the Railway dashboard. The ${PG.*} references
+# show how to wire Railway's Postgres plugin via variables.
+[env]
+NODE_ENV = "production"
+PORT = "3001"
+CORS_ORIGIN = "${{ CORS_ORIGIN }}"
+JWT_SECRET = "${{ JWT_SECRET }}"
+DATABASE_URL = "${{ DATABASE_URL }}"
+CLICKHOUSE_URL = "${{ CLICKHOUSE_URL }}"
+CLICKHOUSE_USER = "${{ CLICKHOUSE_USER }}"
+CLICKHOUSE_PASSWORD = "${{ CLICKHOUSE_PASSWORD }}"
+CLICKHOUSE_DB = "${{ CLICKHOUSE_DB }}"

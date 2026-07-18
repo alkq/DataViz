@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+out/
+*.tsbuildinfo
+
+# Env files (secrets / local overrides) — keep examples tracked
+.env
+.env.local
+.env*.local
+!.env.local.example
+!.env.example
+!.env.production.example
+
+# Local-only desktop launcher (not used on servers)
+start-local.cmd
+
+# Stray test / junk files that landed in the repo root
+UsersUSERDownloadssample.xlsx
+sisliconflow*.png
+*.png
+data_data_redirect.js
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

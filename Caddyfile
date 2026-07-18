@@ -1,0 +1,17 @@
+# Caddyfile for the single-VPS deploy (docker-compose.deploy.yml).
+# Set DOMAIN (env) or replace ${DOMAIN} with your real domain.
+# Caddy auto-obtains and renews a free Let's Encrypt certificate.
+
+{
+  email admin@${DOMAIN}
+}
+
+${DOMAIN} {
+  # Next.js web
+  reverse_proxy web:3000
+
+  # API under /api
+  handle_path /api/* {
+    reverse_proxy api:3001
+  }
+}
