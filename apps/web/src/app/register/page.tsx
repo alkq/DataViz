@@ -1,16 +1,19 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input, Card, LoadingSpinner } from '@/components/ui/common';
 
-export const dynamic = 'force-dynamic';
+function getRedirect(): string {
+  if (typeof window === 'undefined') return '/dashboard';
+  const p = new URLSearchParams(window.location.search).get('redirect');
+  return p || '/dashboard';
+}
 
 function RegisterContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const login = useAuthStore((state) => state.login);
 
   const [email, setEmail] = useState('');
@@ -61,8 +64,7 @@ function RegisterContent() {
         }
         const user = await userResponse.json();
         login(data.accessToken, user);
-        const redirect = searchParams.get('redirect') || '/dashboard';
-        router.push(redirect);
+        router.push(getRedirect());
       } else {
         setError('No access token received');
       }
@@ -138,18 +140,5 @@ function RegisterContent() {
 }
 
 export default function RegisterPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-          <div className="text-center">
-            <LoadingSpinner size="lg" />
-            <p className="text-gray-600 mt-2">Loading...</p>
-          </div>
-        </div>
-      }
-    >
-      <RegisterContent />
-    </Suspense>
-  );
+  return <RegisterContent />;
 }
