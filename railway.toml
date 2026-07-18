@@ -10,7 +10,7 @@ dockerfile = "apps/api/Dockerfile"
 # COPY paths (./packages, ./apps, ./package.json) resolve correctly.
 
 [deploy]
-healthcheckPath = "/api/v1/health"
+healthcheckPath = "/api/v1/health/liveness"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10

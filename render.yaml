@@ -1,0 +1,41 @@
+# Render Blueprint — deploys both services from the repo root.
+# Deploy: Render dashboard -> New -> Blueprint -> select this repo.
+# Root directory for BOTH is the repo root ('.') so the Dockerfiles'
+# COPY ./packages and COPY ./package.json paths resolve correctly.
+
+services:
+  - type: web
+    name: dataviz-api
+    runtime: docker
+    rootDir: .
+    dockerfilePath: ./apps/api/Dockerfile
+    plan: free
+    healthCheckPath: /api/v1/health/liveness
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: JWT_SECRET
+        generateValue: true
+      # Paste your Neon connection string (DB name = dataviz) in the dashboard.
+      - key: DATABASE_URL
+        sync: false
+      # Paste your Vercel URL, e.g. https://dataviz.vercel.app
+      - key: CORS_ORIGIN
+        sync: false
+
+  - type: web
+    name: dataviz-web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: ./apps/web/Dockerfile
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Paste your Railway/Render API URL, MUST include /api/v1, e.g.
+      # https://dataviz-api.onrender.com/api/v1
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
