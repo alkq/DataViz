@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input, Card, LoadingSpinner } from '@/components/ui/common';
 
+export const dynamic = 'force-dynamic';
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
