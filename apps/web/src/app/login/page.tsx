@@ -25,6 +25,7 @@ function LoginContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    alert('DEBUG handleSubmit START api=' + API_URL);
     if (!email.trim() || !password.trim()) {
       setError('Please fill in all fields');
       return;
@@ -41,6 +42,7 @@ function LoginContent() {
       });
 
       const data = await response.json().catch(() => ({}));
+      alert('DEBUG after login fetch: ok=' + response.ok + ' hasToken=' + !!data.accessToken + ' api=' + API_URL);
 
       if (!response.ok) {
         throw new Error(data?.message || 'Invalid email or password');
