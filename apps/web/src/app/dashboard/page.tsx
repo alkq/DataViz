@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
-import { useRouter } from 'next/navigation';
 import { Header } from '@/components/ui/Header';
 import { Providers } from '@/components/Providers';
 import { Card, LoadingSpinner, Badge, Button } from '@/components/ui/common';
@@ -12,15 +11,14 @@ import Link from 'next/link';
 
 function DashboardContent() {
   const { user, isAuthenticated } = useAuthStore();
-  const router = useRouter();
   const { data: devices, error, isLoading, mutate } = useDevices();
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/login');
+      window.location.href = '/login';
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) return null;
 

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input, Card, LoadingSpinner } from '@/components/ui/common';
@@ -13,13 +12,8 @@ function getRedirect(): string {
 }
 
 function LoginContent() {
-  const router = useRouter();
   const login = useAuthStore((state) => state.login);
 
-  // Dev login is opt-in via NEXT_PUBLIC_ENABLE_DEV_LOGIN. It is NEVER shown
-  // to anonymous users by default — a developer must explicitly enable it
-  // (e.g. in .env.local). `next dev` is always development mode, so gating on
-  // NODE_ENV alone is not enough to hide it from end users.
   const showDevOptions = process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true';
 
   const [email, setEmail] = useState('');
@@ -27,7 +21,6 @@ function LoginContent() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // NEXT_PUBLIC_API_URL already includes the /api/v1 prefix (see .env.local).
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,10 +40,10 @@ function LoginContent() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.message || 'Invalid email or password');
+        throw new Error(data?.message || 'Invalid email or password');
       }
 
       if (data.accessToken) {
@@ -64,13 +57,14 @@ function LoginContent() {
 
         const user = await userResponse.json();
         login(data.accessToken, user);
-        router.push(getRedirect());
+        // Full-page navigation avoids App Router router.push quirks after async auth.
+        window.location.href = getRedirect();
       } else {
         setError('No access token received');
+        setLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || 'Sign in failed. Please try again.');
-    } finally {
+      setError(err?.message || 'Sign in failed. Please try again.');
       setLoading(false);
     }
   };
@@ -86,20 +80,20 @@ function LoginContent() {
         body: JSON.stringify({}),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (data.accessToken) {
         const userResponse = await fetch(`${API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${data.accessToken}` },
         });
         const user = await userResponse.json();
         login(data.accessToken, user);
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
       } else {
-        setError(data.error || 'Failed to generate dev token');
+        setError(data?.error || 'Failed to generate dev token');
+        setLoading(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       setError('Dev login not available');
-    } finally {
       setLoading(false);
     }
   };

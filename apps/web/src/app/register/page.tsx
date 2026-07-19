@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input, Card, LoadingSpinner } from '@/components/ui/common';
@@ -13,7 +12,6 @@ function getRedirect(): string {
 }
 
 function RegisterContent() {
-  const router = useRouter();
   const login = useAuthStore((state) => state.login);
 
   const [email, setEmail] = useState('');
@@ -49,10 +47,10 @@ function RegisterContent() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+        throw new Error(data?.message || 'Registration failed');
       }
 
       if (data.accessToken) {
@@ -64,13 +62,13 @@ function RegisterContent() {
         }
         const user = await userResponse.json();
         login(data.accessToken, user);
-        router.push(getRedirect());
+        window.location.href = getRedirect();
       } else {
         setError('No access token received');
+        setLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
-    } finally {
+      setError(err?.message || 'Registration failed. Please try again.');
       setLoading(false);
     }
   };

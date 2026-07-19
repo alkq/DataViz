@@ -2,20 +2,14 @@
 
 import { Providers } from '@/components/Providers';
 import { useAuthStore } from '@/lib/auth-store';
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function HomePage() {
-  const router = useRouter();
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
-    } else {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
+    window.location.href = isAuthenticated ? '/dashboard' : '/login';
+  }, [isAuthenticated]);
 
   return (
     <Providers>
