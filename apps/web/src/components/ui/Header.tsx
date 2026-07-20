@@ -16,8 +16,9 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            <Link href="/dashboard" className="text-xl font-bold text-slate-900">
-              DataViz Platform
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white grid place-items-center font-bold">D</div>
+              <span className="text-xl font-bold text-slate-900">DataViz</span>
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-slate-900">
@@ -25,9 +26,6 @@ export function Header() {
               </Link>
               <Link href="/sources" className="text-sm font-medium text-gray-700 hover:text-slate-900">
                 Data Sources
-              </Link>
-              <Link href="/telemetry" className="text-sm font-medium text-gray-700 hover:text-slate-900">
-                Telemetry
               </Link>
               <Link href="/datasets" className="text-sm font-medium text-gray-700 hover:text-slate-900">
                 Datasets
