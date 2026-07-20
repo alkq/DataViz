@@ -6,6 +6,9 @@ import { useEffect } from 'react';
 import { Aurora } from '@/components/reactbits/Aurora';
 import { ShinyText } from '@/components/reactbits/ShinyText';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
+import { DecryptedText } from '@/components/reactbits/DecryptedText';
+import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
+import { TiltedCard } from '@/components/reactbits/TiltedCard';
 
 const features = [
   {
@@ -91,7 +94,10 @@ export default function LandingPage() {
             File-first data analysis
           </span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight">
-            Upload your data.<br />
+            <span className="text-slate-900 dark:text-white">
+              <DecryptedText text="Upload your data." speed={45} />
+            </span>
+            <br />
             <span className="text-blue-600 dark:text-blue-400">
               <ShinyText text="Understand it instantly." speed={4} />
             </span>
@@ -123,26 +129,28 @@ export default function LandingPage() {
 
       {/* What it's for */}
       <section id="use" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold">What is DataViz for?</h2>
-          <p className="mt-2 text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Built for anyone who has data in a file and needs answers fast — analysts,
-            founders, students, and operations teams who don&apos;t want to fight a
-            spreadsheet.
-          </p>
-        </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {[
-            { t: 'Turn raw files into insight', d: 'Open a CSV from a download or export and see trends, totals and outliers in seconds.' },
-            { t: 'Share a live view', d: 'Your imported datasets live as saved sources you can reopen and re-analyse any time.' },
-            { t: 'Do the math without Excel', d: 'Derive new columns with simple formulas and get aggregate stats on every numeric field.' },
-          ].map((u) => (
-            <div key={u.t} className="bg-gray-50 dark:bg-slate-800/60 rounded-xl p-6 border border-gray-100 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{u.t}</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{u.d}</p>
-            </div>
-          ))}
-        </div>
+        <ScrollReveal>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold">What is DataViz for?</h2>
+            <p className="mt-2 text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Built for anyone who has data in a file and needs answers fast — analysts,
+              founders, students, and operations teams who don&apos;t want to fight a
+              spreadsheet.
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              { t: 'Turn raw files into insight', d: 'Open a CSV from a download or export and see trends, totals and outliers in seconds.' },
+              { t: 'Share a live view', d: 'Your imported datasets live as saved sources you can reopen and re-analyse any time.' },
+              { t: 'Do the math without Excel', d: 'Derive new columns with simple formulas and get aggregate stats on every numeric field.' },
+            ].map((u) => (
+              <div key={u.t} className="bg-gray-50 dark:bg-slate-800/60 rounded-xl p-6 border border-gray-100 dark:border-slate-700">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{u.t}</h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{u.d}</p>
+              </div>
+            ))}
+          </div>
+        </ScrollReveal>
       </section>
 
       {/* Features */}
@@ -153,17 +161,20 @@ export default function LandingPage() {
             <p className="mt-2 text-gray-600 dark:text-gray-300">Everything you need to go from a raw file to a clear answer.</p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <SpotlightCard
-                key={f.title}
-                className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group"
-              >
-                <div className="p-6">
-                  <div className="text-3xl mb-3">{f.icon}</div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{f.title}</h3>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{f.desc}</p>
-                </div>
-              </SpotlightCard>
+            {features.map((f, i) => (
+              <ScrollReveal key={f.title} delay={(i % 3) * 0.1}>
+                <TiltedCard className="h-full" maxTilt={8}>
+                  <SpotlightCard
+                    className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group"
+                  >
+                    <div className="p-6">
+                      <div className="text-3xl mb-3">{f.icon}</div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{f.title}</h3>
+                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{f.desc}</p>
+                    </div>
+                  </SpotlightCard>
+                </TiltedCard>
+              </ScrollReveal>
             ))}
           </div>
         </div>

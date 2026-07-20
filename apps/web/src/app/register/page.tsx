@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input, Card, LoadingSpinner } from '@/components/ui/common';
+import { Beams } from '@/components/reactbits/Beams';
+import { DecryptedText } from '@/components/reactbits/DecryptedText';
+import { SpecularButton } from '@/components/reactbits/SpecularButton';
 
 function getRedirect(): string {
   if (typeof window === 'undefined') return '/dashboard';
@@ -74,15 +77,19 @@ function RegisterContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
-      <Card className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4 overflow-hidden">
+      <Beams />
+      <Card className="relative z-10 w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur border border-gray-100 dark:border-slate-700">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">DataViz Platform</h1>
-          <p className="text-gray-600 mt-2">Create an account to get started</p>
+          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-blue-600 text-white grid place-items-center text-xl font-bold">D</div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <DecryptedText text="Create your account" speed={35} />
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">Start visualizing your data in minutes</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
             {error}
           </div>
         )}
@@ -97,7 +104,6 @@ function RegisterContent() {
             disabled={loading}
             required
           />
-
           <Input
             label="Password"
             type="password"
@@ -107,7 +113,6 @@ function RegisterContent() {
             disabled={loading}
             required
           />
-
           <Input
             label="Confirm Password"
             type="password"
@@ -117,18 +122,14 @@ function RegisterContent() {
             disabled={loading}
             required
           />
-
-          <Button type="submit" disabled={loading} className="w-full" size="lg">
+          <SpecularButton type="submit" disabled={loading} className="w-full !py-3 text-base">
             {loading ? <LoadingSpinner size="sm" /> : 'Create Account'}
-          </Button>
+          </SpecularButton>
         </form>
 
         <div className="mt-4 text-center">
-          <span className="text-sm text-gray-600">Already have an account? </span>
-          <Link
-            href="/login"
-            className="text-sm text-blue-600 hover:underline focus:outline-none"
-          >
+          <span className="text-sm text-gray-600 dark:text-gray-300">Already have an account? </span>
+          <Link href="/login" className="text-sm text-blue-600 hover:underline focus:outline-none">
             Sign In
           </Link>
         </div>

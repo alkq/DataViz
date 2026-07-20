@@ -9,6 +9,7 @@ import { useDatasets } from '@/hooks/use-api';
 import { Aurora } from '@/components/reactbits/Aurora';
 import { ShinyText } from '@/components/reactbits/ShinyText';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
+import { TiltedCard } from '@/components/reactbits/TiltedCard';
 import Link from 'next/link';
 
 function Icon({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -89,23 +90,25 @@ function DashboardContent() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {datasets.slice(0, 6).map((d) => (
                 <Link key={d.id} href={`/datasets/${d.id}`}>
-                  <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
-                    <div className="p-5">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{d.row_count} rows · {d.columns.length} cols</p>
+                  <TiltedCard className="h-full" maxTilt={6}>
+                    <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
+                      <div className="p-5">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{d.row_count} rows · {d.columns.length} cols</p>
+                          </div>
+                          <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>{d.source_type.toUpperCase()}</Badge>
                         </div>
-                        <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>{d.source_type.toUpperCase()}</Badge>
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {d.columns.slice(0, 4).map((c) => (
+                            <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">{c.name}</span>
+                          ))}
+                          {d.columns.length > 4 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 4}</span>}
+                        </div>
                       </div>
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {d.columns.slice(0, 4).map((c) => (
-                          <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">{c.name}</span>
-                        ))}
-                        {d.columns.length > 4 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 4}</span>}
-                      </div>
-                    </div>
-                  </SpotlightCard>
+                    </SpotlightCard>
+                  </TiltedCard>
                 </Link>
               ))}
             </div>

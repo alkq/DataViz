@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input, Card, LoadingSpinner } from '@/components/ui/common';
+import { Beams } from '@/components/reactbits/Beams';
+import { DecryptedText } from '@/components/reactbits/DecryptedText';
+import { SpecularButton } from '@/components/reactbits/SpecularButton';
 
 function getRedirect(): string {
   if (typeof window === 'undefined') return '/dashboard';
@@ -57,7 +60,6 @@ function LoginContent() {
 
         const user = await userResponse.json();
         login(data.accessToken, user);
-        // Full-page navigation avoids App Router router.push quirks after async auth.
         window.location.href = getRedirect();
       } else {
         setError('No access token received');
@@ -72,14 +74,12 @@ function LoginContent() {
   const handleDevLogin = async () => {
     setLoading(true);
     setError('');
-
     try {
       const response = await fetch(`${API_URL}/auth/dev-token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-
       const data = await response.json().catch(() => ({}));
       if (data.accessToken) {
         const userResponse = await fetch(`${API_URL}/auth/me`, {
@@ -99,15 +99,19 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
-      <Card className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4 overflow-hidden">
+      <Beams />
+      <Card className="relative z-10 w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur border border-gray-100 dark:border-slate-700">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">DataViz Platform</h1>
-          <p className="text-gray-600 mt-2">Sign in to access your dashboard</p>
+          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-blue-600 text-white grid place-items-center text-xl font-bold">D</div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <DecryptedText text="Welcome back" speed={35} />
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">Sign in to access your dashboard</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
             {error}
           </div>
         )}
@@ -122,7 +126,6 @@ function LoginContent() {
             disabled={loading}
             required
           />
-
           <Input
             label="Password"
             type="password"
@@ -132,25 +135,21 @@ function LoginContent() {
             disabled={loading}
             required
           />
-
-          <Button type="submit" disabled={loading} className="w-full" size="lg">
+          <SpecularButton type="submit" disabled={loading} className="w-full !py-3 text-base">
             {loading ? <LoadingSpinner size="sm" /> : 'Sign In'}
-          </Button>
+          </SpecularButton>
         </form>
 
         <div className="mt-4 text-center">
-          <span className="text-sm text-gray-600">Don&apos;t have an account? </span>
-          <Link
-            href="/register"
-            className="text-sm text-blue-600 hover:underline focus:outline-none"
-          >
+          <span className="text-sm text-gray-600 dark:text-gray-300">Don&apos;t have an account? </span>
+          <Link href="/register" className="text-sm text-blue-600 hover:underline focus:outline-none">
             Create Account
           </Link>
         </div>
 
         {showDevOptions && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 text-center mb-4">Development Only</p>
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-slate-700">
+            <p className="text-sm text-gray-600 dark:text-gray-300 text-center mb-4">Development Only</p>
             <Button onClick={handleDevLogin} variant="secondary" disabled={loading} className="w-full">
               Generate Dev Token
             </Button>
