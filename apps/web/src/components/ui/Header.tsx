@@ -21,6 +21,9 @@ export function Header() {
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">DataViz</span>
             </Link>
             <nav className="hidden md:flex items-center gap-6">
+              <Link href="/" className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-slate-900 dark:hover:text-white">
+                Home
+              </Link>
               <Link href="/dashboard" className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-slate-900 dark:hover:text-white">
                 Dashboard
               </Link>

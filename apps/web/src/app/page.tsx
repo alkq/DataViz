@@ -2,13 +2,20 @@
 
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
-import { useEffect } from 'react';
 import { Aurora } from '@/components/reactbits/Aurora';
+import { SoftAurora } from '@/components/reactbits/SoftAurora';
+import { SideRays } from '@/components/reactbits/SideRays';
 import { ShinyText } from '@/components/reactbits/ShinyText';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { DecryptedText } from '@/components/reactbits/DecryptedText';
 import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
 import { TiltedCard } from '@/components/reactbits/TiltedCard';
+import { CardSwap } from '@/components/reactbits/CardSwap';
+import { AnimatedList } from '@/components/reactbits/AnimatedList';
+import { CountUp } from '@/components/reactbits/CountUp';
+import { Counter } from '@/components/reactbits/Counter';
+import { BorderGlow } from '@/components/reactbits/BorderGlow';
+import { ClickSpark } from '@/components/reactbits/ClickSpark';
 
 const features = [
   {
@@ -50,13 +57,7 @@ const steps = [
 ];
 
 export default function LandingPage() {
-  const { isAuthenticated, hydrated } = useAuthStore();
-
-  useEffect(() => {
-    if (hydrated && isAuthenticated) {
-      window.location.href = '/dashboard';
-    }
-  }, [hydrated, isAuthenticated]);
+  const { isAuthenticated } = useAuthStore();
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -86,9 +87,11 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero with Aurora background */}
+      {/* Hero with Aurora + SoftAurora + SideRays background */}
       <section className="relative overflow-hidden">
         <Aurora className="opacity-30 dark:opacity-50" />
+        <SoftAurora className="opacity-70" />
+        <SideRays />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-28 text-center">
           <span className="inline-block mb-5 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold">
             File-first data analysis
@@ -108,12 +111,16 @@ export default function LandingPage() {
             spreadsheets, no code, no setup.
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl shadow-sm"
-            >
-              Start for free
-            </Link>
+            <ClickSpark>
+              <BorderGlow className="rounded-xl" radius="0.75rem">
+                <Link
+                  href="/register"
+                  className="inline-block text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl shadow-sm"
+                >
+                  Start for free
+                </Link>
+              </BorderGlow>
+            </ClickSpark>
             <Link
               href="/login"
               className="text-base font-semibold text-slate-700 dark:text-slate-100 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 px-6 py-3 rounded-xl"
@@ -125,6 +132,62 @@ export default function LandingPage() {
             Free to use · Your data stays private and scoped to your account
           </p>
         </div>
+      </section>
+
+      {/* Trust / stats strip with CountUp */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { v: 50, suffix: 'K+', label: 'Files visualized' },
+            { v: 12, suffix: 'M+', label: 'Rows analyzed' },
+            { v: 99, suffix: '%', label: 'Uptime' },
+            { v: 0, suffix: '$', label: 'Cost to start' },
+          ].map((s) => (
+            <div key={s.label} className="rounded-xl border border-gray-100 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur px-5 py-4 text-center">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <CountUp to={s.v} suffix={s.suffix} />
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Showcase: CardSwap + AnimatedList */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid md:grid-cols-2 gap-10 items-center">
+        <ScrollReveal>
+          <h2 className="text-3xl font-bold mb-3">See what your data becomes</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            Upload once and watch a flat file turn into a clear, explorable view — examples of what members build:
+          </p>
+          <CardSwap
+            cards={[
+              { title: 'Monthly sales by region', desc: 'A bar chart of revenue split across 6 regions, sorted automatically.', accent: '#3b82f6' },
+              { title: 'Support ticket trends', desc: 'A line chart of tickets over time with a 7-day moving average.', accent: '#a855f7' },
+              { title: 'User engagement scatter', desc: 'Sessions vs. conversions, colored by plan tier.', accent: '#22d3ee' },
+              { title: 'Inventory health', desc: 'Low-stock flags derived from a simple formula column.', accent: '#22c55e' },
+            ]}
+          />
+        </ScrollReveal>
+        <ScrollReveal delay={0.15}>
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+            <h3 className="text-lg font-semibold mb-3 text-slate-900 dark:text-slate-100">Built-in data tools</h3>
+            <AnimatedList
+              items={[
+                'Auto-detect column types (number, date, category)',
+                'Line / bar / scatter charts, zero config',
+                'Aggregate stats: sum, mean, min, max, median',
+                'Derive columns with formulas like a * 2 + b',
+                'Filter, sort and search your rows',
+                'Revisit every file as a saved Data Source',
+              ]}
+            />
+            <div className="mt-6 border-t border-gray-100 dark:border-slate-700 pt-5">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Member rating</p>
+              <Counter initial={1240} step={1} />
+            </div>
+          </div>
+        </ScrollReveal>
       </section>
 
       {/* What it's for */}
