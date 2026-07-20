@@ -10,17 +10,20 @@ import { Device } from '@/types';
 import Link from 'next/link';
 
 function DashboardContent() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, hydrated } = useAuthStore();
   const { data: devices, error, isLoading, mutate } = useDevices();
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    // Wait until the persisted store has rehydrated from localStorage,
+    // otherwise the default (unauthenticated) state causes a false redirect.
+    if (hydrated && !isAuthenticated) {
       window.location.href = '/login';
     }
-  }, [isAuthenticated]);
+  }, [hydrated, isAuthenticated]);
 
-  if (!isAuthenticated) return null;
+  // While rehydrating, show nothing (avoid flicker / false redirect).
+  if (!hydrated || !isAuthenticated) return null;
 
   const activeDevices = devices?.filter(d => d.status === 'active').length || 0;
   const totalDevices = devices?.length || 0;

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface User {
   sub: string;
@@ -13,6 +13,8 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  hydrated: boolean;
+  setHydrated: () => void;
   login: (token: string, user: User) => void;
   logout: () => void;
   updateToken: (token: string) => void;
@@ -24,10 +26,20 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
+      hydrated: false,
+      setHydrated: () => set({ hydrated: true }),
       login: (accessToken: string, user: User) => set({ accessToken, user, isAuthenticated: true }),
       logout: () => set({ accessToken: null, user: null, isAuthenticated: false }),
       updateToken: (accessToken: string) => set({ accessToken }),
     }),
-    { name: 'auth-storage' }
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        // Called after localStorage has been read; mark hydrated so guards
+        // don't redirect based on the default (unauthenticated) state.
+        state?.setHydrated();
+      },
+    }
   )
 );

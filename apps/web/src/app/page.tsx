@@ -5,11 +5,12 @@ import { useAuthStore } from '@/lib/auth-store';
 import { useEffect } from 'react';
 
 export default function HomePage() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, hydrated } = useAuthStore();
 
   useEffect(() => {
+    if (!hydrated) return;
     window.location.href = isAuthenticated ? '/dashboard' : '/login';
-  }, [isAuthenticated]);
+  }, [hydrated, isAuthenticated]);
 
   return (
     <Providers>
