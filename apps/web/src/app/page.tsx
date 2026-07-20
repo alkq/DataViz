@@ -55,7 +55,7 @@ export default function LandingPage() {
   }, [hydrated, isAuthenticated]);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
       {/* Top nav */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -83,7 +83,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-50 to-white" />
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-50 to-white dark:from-slate-800 dark:to-slate-900" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
           <span className="inline-block mb-4 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
             Turn raw files into insight
@@ -134,7 +134,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="bg-gray-50 border-y border-gray-100">
+      <section id="how" className="bg-gray-50 dark:bg-slate-800/50 border-y border-gray-100 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold">How it works</h2>
@@ -166,7 +166,7 @@ export default function LandingPage() {
         </Link>
       </section>
 
-      <footer className="border-t border-gray-100">
+      <footer className="border-t border-gray-100 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-sm text-gray-400 flex items-center justify-between">
           <span>© {new Date().getFullYear()} DataViz</span>
           <span>Built for file-first data analysis</span>
