@@ -5,13 +5,14 @@ import { useAuthStore } from '@/lib/auth-store';
 import { Header } from '@/components/ui/Header';
 import { Providers } from '@/components/Providers';
 import { Card, LoadingSpinner, Badge, Button } from '@/components/ui/common';
-import { useDevices } from '@/hooks/use-api';
+import { useDevices, useDatasets } from '@/hooks/use-api';
 import { Device } from '@/types';
 import Link from 'next/link';
 
 function DashboardContent() {
   const { user, isAuthenticated, hydrated } = useAuthStore();
   const { data: devices, error, isLoading, mutate } = useDevices();
+  const { data: datasets } = useDatasets();
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
   useEffect(() => {
@@ -100,6 +101,46 @@ function DashboardContent() {
           </Card>
         </div>
 
+        {/* Recent Datasets history */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-slate-900">Recent Datasets</h2>
+            <Link href="/datasets" className="text-sm text-blue-600 hover:underline">View all</Link>
+          </div>
+          {!datasets || datasets.length === 0 ? (
+            <Card>
+              <p className="text-center text-gray-500 py-8">
+                No datasets imported yet.{' '}
+                <Link href="/datasets" className="text-blue-600 hover:underline">Upload your first file</Link>.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {datasets.slice(0, 6).map((d) => (
+                <Link key={d.id} href={`/datasets/${d.id}`}>
+                  <Card className="hover:shadow-md transition-shadow h-full">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-slate-900 truncate">{d.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{d.row_count} rows · {d.columns.length} cols</p>
+                      </div>
+                      <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>{d.source_type.toUpperCase()}</Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {d.columns.slice(0, 4).map((c) => (
+                        <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">
+                          {c.name}
+                        </span>
+                      ))}
+                      {d.columns.length > 4 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 4}</span>}
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card title="Devices" className="lg:col-span-2">
             {isLoading ? (
@@ -153,7 +194,7 @@ function DashboardContent() {
                 </table>
                 {devices?.length === 0 && (
                   <div className="text-center py-12 text-gray-500">
-                    No devices found. <Link href="/devices" className="text-blue-600 hover:underline">Add one</Link>
+                    No data sources found. <Link href="/sources" className="text-blue-600 hover:underline">Add one</Link>
                   </div>
                 )}
               </div>
@@ -162,13 +203,13 @@ function DashboardContent() {
 
           <Card title="Quick Actions">
             <div className="space-y-3">
-              <Link href="/devices">
-                <Button variant="secondary" className="w-full justify-start">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Manage Devices
-                </Button>
+              <Link href="/sources">
+              <Button variant="secondary" className="w-full justify-start">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Manage Data Sources
+              </Button>
               </Link>
               <Link href="/telemetry">
                 <Button variant="secondary" className="w-full justify-start">

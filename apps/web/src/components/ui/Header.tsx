@@ -23,8 +23,8 @@ export function Header() {
               <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-slate-900">
                 Dashboard
               </Link>
-              <Link href="/devices" className="text-sm font-medium text-gray-700 hover:text-slate-900">
-                Devices
+              <Link href="/sources" className="text-sm font-medium text-gray-700 hover:text-slate-900">
+                Data Sources
               </Link>
               <Link href="/telemetry" className="text-sm font-medium text-gray-700 hover:text-slate-900">
                 Telemetry

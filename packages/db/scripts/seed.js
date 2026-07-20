@@ -129,7 +129,15 @@ async function main() {
   const pool = new Pool({ connectionString: pgConnectionString });
   try {
     await seedPostgres(pool);
-    await seedClickHouse();
+    if (process.env.CLICKHOUSE_URL) {
+      try {
+        await seedClickHouse();
+      } catch (chErr) {
+        console.warn('  ClickHouse seed skipped (error):', chErr.message);
+      }
+    } else {
+      console.log('  Skipping ClickHouse seed (CLICKHOUSE_URL not set).');
+    }
     console.log('Seed complete ✅');
   } finally {
     await pool.end();

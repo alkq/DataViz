@@ -9,10 +9,84 @@ import { Card, Button, Select, LoadingSpinner } from '@/components/ui/common';
 import { Providers } from '@/components/Providers';
 import { DatasetChart } from '@/components/charts/DatasetChart';
 
+type Row = Record<string, unknown>;
+
+function toNumber(v: unknown): number {
+  if (v === null || v === undefined || v === '') return NaN;
+  const n = typeof v === 'number' ? v : Number(String(v).replace(/,/g, ''));
+  return isNaN(n) ? NaN : n;
+}
+
+// ---- Safe formula evaluator -------------------------------------------------
+// Supports + - * / % ^, parentheses, numbers, and column names (letters/_).
+// No eval / Function — we tokenize and evaluate via shunting-yard.
+function evalFormula(formula: string, row: Row, cols: string[]): number {
+  const colSet = new Set(cols.map((c) => c.toLowerCase()));
+  const tokens = formula.match(/\(|\)|\+|-|\*|\/|%|\^|[A-Za-z_][A-Za-z0-9_]*|\d+\.?\d*/g);
+  if (!tokens) throw new Error('Empty formula');
+  const output: Array<{ t: 'n'; v: number } | { t: 'o'; v: string }> = [];
+  const ops: string[] = [];
+  const prec: Record<string, number> = { '+': 1, '-': 1, '*': 2, '/': 2, '%': 2, '^': 3 };
+  const ra: Record<string, number> = { '+': 2, '-': 2, '*': 2, '/': 2, '%': 2, '^': 2 };
+  const apply = (op: string) => {
+    const b = (output.pop() as { t: 'n'; v: number }).v;
+    const a = (output.pop() as { t: 'n'; v: number }).v;
+    let r = 0;
+    switch (op) {
+      case '+': r = a + b; break;
+      case '-': r = a - b; break;
+      case '*': r = a * b; break;
+      case '/': r = b === 0 ? NaN : a / b; break;
+      case '%': r = b === 0 ? NaN : a % b; break;
+      case '^': r = Math.pow(a, b); break;
+    }
+    output.push({ t: 'n', v: r });
+  };
+  for (const tk of tokens) {
+    if (/^\d+\.?\d*$/.test(tk)) {
+      output.push({ t: 'n', v: parseFloat(tk) });
+    } else if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(tk)) {
+      const key = cols.find((c) => c.toLowerCase() === tk.toLowerCase());
+      if (!key || !colSet.has(tk.toLowerCase())) throw new Error(`Unknown column "${tk}"`);
+      output.push({ t: 'n', v: toNumber(row[key]) });
+    } else if ('+-*/%^'.includes(tk)) {
+      while (ops.length && prec[ops[ops.length - 1]] >= prec[tk] && ra[tk] === 2) apply(ops.pop()!);
+      ops.push(tk);
+    } else if (tk === '(') {
+      ops.push(tk);
+    } else if (tk === ')') {
+      while (ops.length && ops[ops.length - 1] !== '(') apply(ops.pop()!);
+      if (ops.pop() !== '(') throw new Error('Mismatched parentheses');
+    } else {
+      throw new Error(`Invalid token "${tk}"`);
+    }
+  }
+  while (ops.length) {
+    const o = ops.pop()!;
+    if (o === '(' || o === ')') throw new Error('Mismatched parentheses');
+    apply(o);
+  }
+  if (output.length !== 1) throw new Error('Invalid formula');
+  return (output[0] as { t: 'n'; v: number }).v;
+}
+
+function aggregate(values: number[]) {
+  const nums = values.filter((n) => !isNaN(n));
+  if (nums.length === 0) return { sum: NaN, avg: NaN, min: NaN, max: NaN, count: 0 };
+  const sum = nums.reduce((a, b) => a + b, 0);
+  return {
+    sum,
+    avg: sum / nums.length,
+    min: Math.min(...nums),
+    max: Math.max(...nums),
+    count: nums.length,
+  };
+}
+
 function DatasetViewContent() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
-  const { data: dataset, error: dsError } = useDataset(id);
+  const { data: dataset } = useDataset(id);
   const { data: rows, error: rowsError, isLoading } = useDatasetRows(id, 500, 0);
 
   const numberCols = useMemo(
@@ -25,9 +99,40 @@ function DatasetViewContent() {
   const [xColumn, setXColumn] = useState<string>('');
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
 
-  // Default selections once data arrives.
+  // Formula state
+  const [formula, setFormula] = useState('');
+  const [calcName, setCalcName] = useState('calculated');
+  const [calcError, setCalcError] = useState('');
+  const [calcCol, setCalcCol] = useState<string | null>(null);
+
   const effectiveY = yColumn || numberCols[0] || allCols[1] || allCols[0] || '';
   const effectiveX = xColumn || allCols[0] || '';
+
+  // Build computed rows when a formula is valid.
+  const computedRows = useMemo<Row[]>(() => {
+    if (!formula.trim() || !rows) return rows || [];
+    try {
+      const result = rows.map((r) => {
+        const v = evalFormula(formula, r, allCols);
+        return { ...r, [calcName || 'calculated']: isNaN(v) ? null : v };
+      });
+      setCalcError('');
+      setCalcCol(calcName || 'calculated');
+      return result;
+    } catch (e: any) {
+      setCalcError(e.message || 'Invalid formula');
+      setCalcCol(null);
+      return rows;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formula, rows, allCols, calcName]);
+
+  const stats = useMemo(() => {
+    if (!rows) return [];
+    return numberCols.map((c) => ({ col: c, ...aggregate(rows.map((r) => toNumber(r[c]))) }));
+  }, [rows, numberCols]);
+
+  const displayRows = formula.trim() ? computedRows : rows;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,8 +145,6 @@ function DatasetViewContent() {
             {dataset?.row_count} rows · {dataset?.columns.length} columns · {dataset?.source_type.toUpperCase()}
           </p>
         </div>
-
-        {dsError && <Card><p className="text-red-600">Failed to load dataset: {dsError.message}</p></Card>}
 
         {dataset && (
           <Card className="mb-6">
@@ -73,6 +176,81 @@ function DatasetViewContent() {
           </Card>
         )}
 
+        {/* Calculator: aggregates + formula */}
+        <Card className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Calculate</h2>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Aggregate stats */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Column summaries</h3>
+              {stats.length === 0 ? (
+                <p className="text-sm text-gray-500">No numeric columns to summarise.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 border-b border-gray-200">
+                        <th className="px-3 py-2 font-medium">Column</th>
+                        <th className="px-3 py-2 font-medium">Sum</th>
+                        <th className="px-3 py-2 font-medium">Avg</th>
+                        <th className="px-3 py-2 font-medium">Min</th>
+                        <th className="px-3 py-2 font-medium">Max</th>
+                        <th className="px-3 py-2 font-medium">Count</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.map((s) => (
+                        <tr key={s.col} className="border-b border-gray-100">
+                          <td className="px-3 py-2 font-medium text-slate-700">{s.col}</td>
+                          <td className="px-3 py-2 text-gray-600">{isNaN(s.sum) ? '—' : s.sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                          <td className="px-3 py-2 text-gray-600">{isNaN(s.avg) ? '—' : s.avg.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-gray-600">{isNaN(s.min) ? '—' : s.min.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-gray-600">{isNaN(s.max) ? '—' : s.max.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-gray-600">{s.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Formula box */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Formula (new column)</h3>
+              <p className="text-xs text-gray-500 mb-2">
+                Use column names, e.g. <code className="bg-gray-100 px-1 rounded">price * qty + 10</code>. Supports + - * / % ^ and ( ).
+              </p>
+              <div className="flex gap-2 mb-2">
+                <input
+                  value={calcName}
+                  onChange={(e) => setCalcName(e.target.value)}
+                  placeholder="new column name"
+                  className="flex-1 text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={formula}
+                  onChange={(e) => setFormula(e.target.value)}
+                  placeholder="price * 2 + tax"
+                  className="flex-1 text-sm border border-gray-300 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Button variant="secondary" onClick={() => { setFormula(''); setCalcCol(null); }}>
+                  Clear
+                </Button>
+              </div>
+              {calcError && <p className="text-red-600 text-sm mt-2">{calcError}</p>}
+              {calcCol && (
+                <p className="text-green-600 text-sm mt-2">
+                  ✓ Added column “{calcCol}” — see it in the chart and table below.
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+
         <Card className="mb-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Visualization</h2>
           {isLoading ? (
@@ -80,7 +258,12 @@ function DatasetViewContent() {
           ) : rowsError ? (
             <p className="text-red-600">Failed to load rows: {rowsError.message}</p>
           ) : (
-            <DatasetChart rows={rows || []} xColumn={effectiveX} yColumn={effectiveY} chartType={chartType} />
+            <DatasetChart
+              rows={displayRows || []}
+              xColumn={calcCol && effectiveX === calcCol ? effectiveX : effectiveX}
+              yColumn={calcCol || effectiveY}
+              chartType={chartType}
+            />
           )}
         </Card>
 
@@ -88,30 +271,37 @@ function DatasetViewContent() {
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Data preview</h2>
           {isLoading ? (
             <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
-          ) : !rows || rows.length === 0 ? (
+          ) : !displayRows || displayRows.length === 0 ? (
             <p className="text-gray-500 text-center py-8">No rows.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b border-gray-200">
-                    {allCols.map((c) => (
-                      <th key={c} className="px-3 py-2 font-medium whitespace-nowrap">{c}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.slice(0, 100).map((r, i) => (
-                    <tr key={i} className="border-b border-gray-100">
-                      {allCols.map((c) => (
-                        <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700">{String(r[c] ?? '')}</td>
+            (() => {
+              const cols = calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols;
+              return (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 border-b border-gray-200">
+                        {cols.map((c) => (
+                          <th key={c} className="px-3 py-2 font-medium whitespace-nowrap">{c}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayRows.slice(0, 100).map((r, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          {cols.map((c) => (
+                            <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700">{String(r[c] ?? '')}</td>
+                          ))}
+                        </tr>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {rows.length > 100 && <p className="text-xs text-gray-400 mt-2">Showing first 100 of {rows.length} rows.</p>}
-            </div>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()
+          )}
+          {displayRows && displayRows.length > 100 && (
+            <p className="text-xs text-gray-400 mt-2">Showing first 100 of {displayRows.length} rows.</p>
           )}
         </Card>
       </main>
