@@ -25,17 +25,15 @@ function LoginContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('DEBUG: handler STARTED, api=' + API_URL);
-
     if (!email.trim() || !password.trim()) {
       setError('Please fill in all fields');
       return;
     }
 
     setLoading(true);
+    setError('');
 
     try {
-      setError('DEBUG: fetching ' + API_URL + '/auth/login');
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,7 +41,6 @@ function LoginContent() {
       });
 
       const data = await response.json().catch(() => ({}));
-      setError('DEBUG: response ok=' + response.ok + ' hasToken=' + !!data.accessToken);
 
       if (!response.ok) {
         throw new Error(data?.message || 'Invalid email or password');
@@ -60,14 +57,14 @@ function LoginContent() {
 
         const user = await userResponse.json();
         login(data.accessToken, user);
-        setError('DEBUG: LOGIN OK — would navigate to ' + getRedirect());
-        // window.location.href = getRedirect();
+        // Full-page navigation avoids App Router router.push quirks after async auth.
+        window.location.href = getRedirect();
       } else {
         setError('No access token received');
         setLoading(false);
       }
     } catch (err: any) {
-      setError('DEBUG CATCH: ' + (err?.message || 'unknown error'));
+      setError(err?.message || 'Sign in failed. Please try again.');
       setLoading(false);
     }
   };
@@ -90,8 +87,7 @@ function LoginContent() {
         });
         const user = await userResponse.json();
         login(data.accessToken, user);
-        setError('DEBUG dev: LOGIN OK');
-        // window.location.href = '/dashboard';
+        window.location.href = '/dashboard';
       } else {
         setError(data?.error || 'Failed to generate dev token');
         setLoading(false);
@@ -111,7 +107,7 @@ function LoginContent() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm whitespace-pre-wrap break-all">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {error}
           </div>
         )}
