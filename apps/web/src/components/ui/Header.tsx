@@ -7,7 +7,9 @@ import { useTheme } from 'next-themes';
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { theme, setTheme } = useTheme();
+  const themeCtx = useTheme();
+  const theme = themeCtx.theme;
+  const setTheme = themeCtx.setTheme;
 
   if (!isAuthenticated) return null;
 
