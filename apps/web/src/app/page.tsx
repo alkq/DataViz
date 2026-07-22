@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 import { Aurora } from '@/components/reactbits/Aurora';
 import { SoftAurora } from '@/components/reactbits/SoftAurora';
 import { SideRays } from '@/components/reactbits/SideRays';
@@ -58,6 +60,10 @@ const steps = [
 
 export default function LandingPage() {
   const { isAuthenticated } = useAuthStore();
+  const { theme, setTheme } = useTheme();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -69,12 +75,25 @@ export default function LandingPage() {
             <span className="text-xl font-bold">DataViz</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600 dark:text-gray-300">
+            <Link href="/" className="hover:text-slate-900 dark:hover:text-white">Home</Link>
             <a href="#features" className="hover:text-slate-900 dark:hover:text-white">Features</a>
             <a href="#how" className="hover:text-slate-900 dark:hover:text-white">How it works</a>
-            <a href="#use" className="hover:text-slate-900 dark:hover:text-white">What it's for</a>
+            <a href="#use" className="hover:text-slate-900 dark:hover:text-white">What it&apos;s for</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-slate-900 dark:hover:text-white">
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-300">Theme:</span>
+              <select
+                value={mounted ? theme : 'system'}
+                onChange={(e) => setTheme(e.target.value)}
+                className="text-sm border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System</option>
+              </select>
+            </div>
+            <Link href="/login" className="hidden sm:inline text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-slate-900 dark:hover:text-white">
               Sign in
             </Link>
             <Link
@@ -83,6 +102,25 @@ export default function LandingPage() {
             >
               Get started
             </Link>
+            {/* Hamburger: Dashboard / Data Sources / Datasets */}
+            <div className="relative md:hidden">
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="Open menu"
+                className="p-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg py-2 z-50">
+                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Dashboard</Link>
+                  <Link href="/sources" onClick={() => setMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Data Sources</Link>
+                  <Link href="/datasets" onClick={() => setMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700">Datasets</Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
