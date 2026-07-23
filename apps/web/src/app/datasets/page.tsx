@@ -16,45 +16,46 @@ import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
 import { BackgroundCollage } from '@/components/reactbits/BackgroundCollage';
 import { Threads } from '@/components/reactbits/Threads';
 import { SoftAurora } from '@/components/reactbits/SoftAurora';
-import { createApiClient } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
-
 function DatasetsContent() {
   const router = useRouter();
   const { data: datasets, error, isLoading, mutate } = useDatasets();
 
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [name, setName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      setUploadError('Please choose a CSV or Excel file');
+    if (files.length === 0) {
+      setUploadError('Please choose at least one file');
       return;
     }
     setUploading(true);
     setUploadError('');
     try {
-      const client = createApiClient(() => useAuthStore.getState().accessToken);
-      const form = new FormData();
-      form.append('file', file);
-      if (name.trim()) form.append('name', name.trim());
-      // Use the raw fetch path for multipart (api client only does JSON).
       const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
       const token = useAuthStore.getState().accessToken;
-      const res = await fetch(`${base}/datasets/upload`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || data.error || 'Upload failed');
+      let firstId: string | null = null;
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const form = new FormData();
+        form.append('file', f);
+        if (i === 0 && name.trim()) form.append('name', name.trim());
+        const res = await fetch(`${base}/datasets/upload`, {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: form,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || data.error || `Upload failed for ${f.name}`);
+        if (!firstId) firstId = data.id;
+      }
       await mutate();
-      setFile(null);
+      setFiles([]);
       setName('');
-      router.push(`/datasets/${data.id}`);
+      if (firstId) router.push(`/datasets/${firstId}`);
     } catch (err: any) {
       setUploadError(err.message || 'Upload failed');
     } finally {
@@ -93,14 +94,49 @@ function DatasetsContent() {
               disabled={uploading}
             />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">File (.csv, .tsv, .xlsx, .xls)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Files (.csv, .tsv, .xlsx, .xls) — you can select multiple</label>
               <input
                 type="file"
+                multiple
                 accept=".csv,.tsv,.txt,.xlsx,.xls"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
                 disabled={uploading}
-                className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                className="block w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
               />
+              {files.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    {files.length} file{files.length > 1 ? 's' : ''} selected
+                  </p>
+                  <ul className="space-y-1.5">
+                    {files.map((f, i) => (
+                      <li
+                        key={`${f.name}-${i}`}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 px-3 py-2"
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V7a2 2 0 012-2h5l5 5v8a2 2 0 01-2 2z" />
+                          </svg>
+                          <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{f.name}</span>
+                          <span className="text-xs text-gray-400 shrink-0">({(f.size / 1024).toFixed(0)} KB)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                          disabled={uploading}
+                          className="text-gray-400 hover:text-red-500 shrink-0"
+                          aria-label={`Remove ${f.name}`}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             {uploadError && <p className="text-red-600 text-sm">{uploadError}</p>}
             <Button type="submit" disabled={uploading}>
