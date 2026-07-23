@@ -18,6 +18,8 @@ import { CountUp } from '@/components/reactbits/CountUp';
 import { Counter } from '@/components/reactbits/Counter';
 import { BorderGlow } from '@/components/reactbits/BorderGlow';
 import { ClickSpark } from '@/components/reactbits/ClickSpark';
+import { BackgroundCollage } from '@/components/reactbits/BackgroundCollage';
+import { BarCube, OrbitNode, DataCard } from '@/components/reactbits/Interactive3D';
 
 const features = [
   {
@@ -125,12 +127,19 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero with Aurora + SoftAurora + SideRays background */}
+      {/* Hero with Aurora + SoftAurora + SideRays + masked image collage + interactive 3D */}
       <section className="relative overflow-hidden">
+        <BackgroundCollage />
         <Aurora className="opacity-30 dark:opacity-50" />
         <SoftAurora className="opacity-70" />
         <SideRays />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-28 text-center">
+          {/* Floating interactive 3D elements */}
+          <div className="pointer-events-none absolute inset-0 hidden lg:block">
+            <div className="pointer-events-auto absolute left-[6%] top-[18%]"><BarCube /></div>
+            <div className="pointer-events-auto absolute right-[8%] top-[20%]"><OrbitNode /></div>
+            <div className="pointer-events-auto absolute right-[12%] bottom-[14%]"><DataCard /></div>
+          </div>
           <span className="inline-block mb-5 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold">
             File-first data analysis
           </span>
