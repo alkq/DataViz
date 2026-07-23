@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
     // Allow Next.js inline + bundled scripts (no nonce/strict-dynamic, which breaks hydration)
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://images.unsplash.com",
     "font-src 'self' https://fonts.gstatic.com",
     `connect-src 'self' ${apiOrigin} https://vercel.live wss://localhost:*`,
     "object-src 'none'",
