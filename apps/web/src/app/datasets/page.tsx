@@ -10,6 +10,8 @@ import { Providers } from '@/components/Providers';
 import { Aurora } from '@/components/reactbits/Aurora';
 import { ShinyText } from '@/components/reactbits/ShinyText';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
+import { TiltedCard } from '@/components/reactbits/TiltedCard';
+import { Dither } from '@/components/reactbits/Dither';
 import { createApiClient } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 
@@ -63,6 +65,7 @@ function DatasetsContent() {
         {/* Hero strip with aurora accent */}
         <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 mb-8">
           <Aurora className="opacity-20 dark:opacity-40" />
+          <Dither className="opacity-30" color1="#1e3a8a" color2="#0f172a" />
           <div className="relative px-6 py-8 sm:px-8">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
               <ShinyText text="Datasets" speed={5} />

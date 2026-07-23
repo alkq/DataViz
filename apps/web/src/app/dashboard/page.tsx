@@ -11,6 +11,7 @@ import { ShinyText } from '@/components/reactbits/ShinyText';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { TiltedCard } from '@/components/reactbits/TiltedCard';
 import { ClickSpark } from '@/components/reactbits/ClickSpark';
+import { Dither } from '@/components/reactbits/Dither';
 import Link from 'next/link';
 
 function Icon({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -50,6 +51,7 @@ function DashboardContent() {
         {/* Hero strip with aurora accent */}
         <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 mb-8">
           <Aurora className="opacity-20 dark:opacity-40" />
+          <Dither className="opacity-30" color1="#1e3a8a" color2="#0f172a" />
           <div className="relative px-6 py-8 sm:px-8">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
               <ShinyText text="Dashboard" speed={5} />

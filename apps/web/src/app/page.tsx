@@ -20,6 +20,8 @@ import { BorderGlow } from '@/components/reactbits/BorderGlow';
 import { ClickSpark } from '@/components/reactbits/ClickSpark';
 import { BackgroundCollage } from '@/components/reactbits/BackgroundCollage';
 import { BarCube, OrbitNode, DataCard } from '@/components/reactbits/Interactive3D';
+import { Threads } from '@/components/reactbits/Threads';
+import { Dither } from '@/components/reactbits/Dither';
 
 const features = [
   {
@@ -127,9 +129,11 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero with Aurora + SoftAurora + SideRays + masked image collage + interactive 3D */}
+      {/* Hero with Aurora + SoftAurora + SideRays + Dither + Threads + masked image collage + interactive 3D */}
       <section className="relative overflow-hidden">
+        <Dither className="opacity-60" />
         <BackgroundCollage />
+        <Threads color="99,102,241" />
         <Aurora className="opacity-30 dark:opacity-50" />
         <SoftAurora className="opacity-70" />
         <SideRays />

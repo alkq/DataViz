@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { useAuthStore } from '@/lib/auth-store';
 import { Button, Input, Card, LoadingSpinner } from '@/components/ui/common';
 import { Beams } from '@/components/reactbits/Beams';
+import { SideRays } from '@/components/reactbits/SideRays';
+import { Threads } from '@/components/reactbits/Threads';
 import { DecryptedText } from '@/components/reactbits/DecryptedText';
 import { SpecularButton } from '@/components/reactbits/SpecularButton';
+import { BorderGlow } from '@/components/reactbits/BorderGlow';
 
 function getRedirect(): string {
   if (typeof window === 'undefined') return '/dashboard';
@@ -101,7 +104,10 @@ function LoginContent() {
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4 overflow-hidden">
       <Beams />
-      <Card className="relative z-10 w-full max-w-md bg-white/90 dark:bg-slate-800/90 backdrop-blur border border-gray-100 dark:border-slate-700">
+      <SideRays />
+      <Threads color="59,130,246" />
+      <BorderGlow className="relative z-10 w-full max-w-md" radius="1rem" color="rgba(59,130,246,0.7)">
+      <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur border-0">
         <div className="text-center mb-8">
           <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-blue-600 text-white grid place-items-center text-xl font-bold">D</div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
@@ -156,6 +162,7 @@ function LoginContent() {
           </div>
         )}
       </Card>
+      </BorderGlow>
     </div>
   );
 }
