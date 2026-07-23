@@ -71,10 +71,12 @@ function DatasetsContent() {
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">
-      <BackgroundCollage />
-      <SoftAurora className="opacity-50" />
-      <Threads color="99,102,241" />
+    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <BackgroundCollage />
+        <SoftAurora className="opacity-50" />
+        <Threads color="99,102,241" />
+      </div>
       <Header />
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero strip with aurora accent */}

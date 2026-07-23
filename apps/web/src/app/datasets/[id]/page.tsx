@@ -9,6 +9,9 @@ import { Card, Button, LoadingSpinner } from '@/components/ui/common';
 import { CustomSelect } from '@/components/ui/Dropdown';
 import { Providers } from '@/components/Providers';
 import { DatasetChart } from '@/components/charts/DatasetChart';
+import { BackgroundCollage } from '@/components/reactbits/BackgroundCollage';
+import { SoftAurora } from '@/components/reactbits/SoftAurora';
+import { Threads } from '@/components/reactbits/Threads';
 
 type Row = Record<string, unknown>;
 
@@ -136,7 +139,12 @@ function DatasetViewContent() {
   const displayRows = formula.trim() ? computedRows : rows;
 
   return (
-    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <BackgroundCollage />
+        <SoftAurora className="opacity-50" />
+        <Threads color="99,102,241" />
+      </div>
       <Header />
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/datasets" className="text-sm text-blue-600 hover:underline">← All datasets</Link>
