@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useDatasets, type DatasetSummary } from '@/hooks/use-api';
@@ -25,6 +25,13 @@ function DatasetsContent() {
   const [name, setName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const addFiles = (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    setFiles((prev) => [...prev, ...Array.from(list)]);
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,15 +101,37 @@ function DatasetsContent() {
               disabled={uploading}
             />
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Files (.csv, .tsv, .xlsx, .xls) — you can select multiple</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Files (.csv, .tsv, .xlsx, .xls) — tap to choose, multiple supported</label>
               <input
+                ref={fileRef}
                 type="file"
                 multiple
                 accept=".csv,.tsv,.txt,.xlsx,.xls"
-                onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
+                onChange={(e) => addFiles(e.target.files)}
                 disabled={uploading}
-                className="block w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                className="hidden"
               />
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                onDrop={(e) => { e.preventDefault(); setDragActive(false); addFiles(e.dataTransfer.files); }}
+                className={`w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors ${
+                  dragActive
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                    : 'border-gray-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/40 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20'
+                } ${uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6 4.5 4.5 0 0117 14.5M12 12v6m0-6l-2.5 2.5M12 12l2.5 2.5" />
+                </svg>
+                <span className="text-sm text-slate-600 dark:text-slate-300">
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">Tap to choose files</span> or drag &amp; drop
+                </span>
+                <span className="text-xs text-gray-400">CSV, TSV, Excel — select one or many</span>
+              </button>
               {files.length > 0 && (
                 <div className="mt-3 space-y-2">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400">

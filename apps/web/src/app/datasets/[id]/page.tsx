@@ -135,19 +135,19 @@ function DatasetViewContent() {
   const displayRows = formula.trim() ? computedRows : rows;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/datasets" className="text-sm text-blue-600 hover:underline">← All datasets</Link>
         <div className="mt-2 mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">{dataset?.name || 'Dataset'}</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{dataset?.name || 'Dataset'}</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-1">
             {dataset?.row_count} rows · {dataset?.columns.length} columns · {dataset?.source_type.toUpperCase()}
           </p>
         </div>
 
         {dataset && (
-          <Card className="mb-6">
+          <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
             <div className="grid gap-4 md:grid-cols-4">
               <Select
                 label="X axis (category / value)"
@@ -168,7 +168,7 @@ function DatasetViewContent() {
                 options={[{ value: 'line', label: 'Line' }, { value: 'bar', label: 'Bar' }]}
               />
               <div className="flex items-end">
-                <Button variant="secondary" onClick={() => { setXColumn(''); setYColumn(''); }}>
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setXColumn(''); setYColumn(''); }}>
                   Reset
                 </Button>
               </div>
@@ -177,20 +177,20 @@ function DatasetViewContent() {
         )}
 
         {/* Calculator: aggregates + formula */}
-        <Card className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Calculate</h2>
+        <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Calculate</h2>
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Aggregate stats */}
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Column summaries</h3>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Column summaries</h3>
               {stats.length === 0 ? (
-                <p className="text-sm text-gray-500">No numeric columns to summarise.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No numeric columns to summarise.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead>
-                      <tr className="text-left text-gray-500 border-b border-gray-200">
+                      <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-600">
                         <th className="px-3 py-2 font-medium">Column</th>
                         <th className="px-3 py-2 font-medium">Sum</th>
                         <th className="px-3 py-2 font-medium">Avg</th>
@@ -201,13 +201,13 @@ function DatasetViewContent() {
                     </thead>
                     <tbody>
                       {stats.map((s) => (
-                        <tr key={s.col} className="border-b border-gray-100">
-                          <td className="px-3 py-2 font-medium text-slate-700">{s.col}</td>
-                          <td className="px-3 py-2 text-gray-600">{isNaN(s.sum) ? '—' : s.sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                          <td className="px-3 py-2 text-gray-600">{isNaN(s.avg) ? '—' : s.avg.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-gray-600">{isNaN(s.min) ? '—' : s.min.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-gray-600">{isNaN(s.max) ? '—' : s.max.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-gray-600">{s.count}</td>
+                        <tr key={s.col} className="border-b border-gray-100 dark:border-slate-700">
+                          <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-200">{s.col}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{isNaN(s.sum) ? '—' : s.sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{isNaN(s.avg) ? '—' : s.avg.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{isNaN(s.min) ? '—' : s.min.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{isNaN(s.max) ? '—' : s.max.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{s.count}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -218,16 +218,16 @@ function DatasetViewContent() {
 
             {/* Formula box */}
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-2">Formula (new column)</h3>
-              <p className="text-xs text-gray-500 mb-2">
-                Use column names, e.g. <code className="bg-gray-100 px-1 rounded">price * qty + 10</code>. Supports + - * / % ^ and ( ).
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Formula (new column)</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                Use column names, e.g. <code className="bg-gray-100 dark:bg-slate-700 px-1 rounded">price * qty + 10</code>. Supports + - * / % ^ and ( ).
               </p>
               <div className="flex gap-2 mb-2">
                 <input
                   value={calcName}
                   onChange={(e) => setCalcName(e.target.value)}
                   placeholder="new column name"
-                  className="flex-1 text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div className="flex gap-2">
@@ -235,7 +235,7 @@ function DatasetViewContent() {
                   value={formula}
                   onChange={(e) => setFormula(e.target.value)}
                   placeholder="price * 2 + tax"
-                  className="flex-1 text-sm border border-gray-300 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <Button variant="secondary" onClick={() => { setFormula(''); setCalcCol(null); }}>
                   Clear
@@ -243,7 +243,7 @@ function DatasetViewContent() {
               </div>
               {calcError && <p className="text-red-600 text-sm mt-2">{calcError}</p>}
               {calcCol && (
-                <p className="text-green-600 text-sm mt-2">
+                <p className="text-green-600 dark:text-green-400 text-sm mt-2">
                   ✓ Added column “{calcCol}” — see it in the chart and table below.
                 </p>
               )}
@@ -251,8 +251,8 @@ function DatasetViewContent() {
           </div>
         </Card>
 
-        <Card className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Visualization</h2>
+        <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Visualization</h2>
           {isLoading ? (
             <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
           ) : rowsError ? (
@@ -267,20 +267,20 @@ function DatasetViewContent() {
           )}
         </Card>
 
-        <Card>
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Data preview</h2>
+        <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Data preview</h2>
           {isLoading ? (
             <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
           ) : !displayRows || displayRows.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No rows.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No rows.</p>
           ) : (
             (() => {
               const cols = calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols;
               return (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
                   <table className="min-w-full text-sm">
                     <thead>
-                      <tr className="text-left text-gray-500 border-b border-gray-200">
+                      <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-600">
                         {cols.map((c) => (
                           <th key={c} className="px-3 py-2 font-medium whitespace-nowrap">{c}</th>
                         ))}
@@ -288,9 +288,9 @@ function DatasetViewContent() {
                     </thead>
                     <tbody>
                       {displayRows.slice(0, 100).map((r, i) => (
-                        <tr key={i} className="border-b border-gray-100">
+                        <tr key={i} className="border-b border-gray-100 dark:border-slate-700">
                           {cols.map((c) => (
-                            <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700">{String(r[c] ?? '')}</td>
+                            <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-slate-300">{String(r[c] ?? '')}</td>
                           ))}
                         </tr>
                       ))}
