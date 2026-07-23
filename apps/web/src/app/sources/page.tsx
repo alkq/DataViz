@@ -12,16 +12,22 @@ import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { TiltedCard } from '@/components/reactbits/TiltedCard';
 import { Dither } from '@/components/reactbits/Dither';
 import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
+import { BackgroundCollage } from '@/components/reactbits/BackgroundCollage';
+import { Threads } from '@/components/reactbits/Threads';
+import { SoftAurora } from '@/components/reactbits/SoftAurora';
 
 function SourcesContent() {
   const { data: datasets, error, isLoading } = useDatasets();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">
+      <BackgroundCollage />
+      <SoftAurora className="opacity-50" />
+      <Threads color="99,102,241" />
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero strip with aurora accent */}
-        <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 mb-8">
+        <section className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur border border-gray-100 dark:border-slate-700 mb-8">
           <Aurora className="opacity-20 dark:opacity-40" />
           <Dither className="opacity-30" color1="#1e3a8a" color2="#0f172a" />
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500" />
@@ -41,11 +47,11 @@ function SourcesContent() {
         </section>
 
         {isLoading ? (
-          <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur"><div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div></Card>
         ) : error ? (
-          <Card><p className="text-red-600">Failed to load sources: {error.message}</p></Card>
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur"><p className="text-red-600">Failed to load sources: {error.message}</p></Card>
         ) : !datasets || datasets.length === 0 ? (
-          <Card>
+          <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur">
             <p className="text-center text-gray-500 dark:text-gray-400 py-12">
               No data sources yet.{' '}
               <Link href="/datasets" className="text-blue-600 hover:underline">Import your first file</Link>{' '}
@@ -58,7 +64,7 @@ function SourcesContent() {
               <Link key={d.id} href={`/datasets/${d.id}`}>
                 <ScrollReveal delay={i * 0.06}>
                   <TiltedCard className="h-full" maxTilt={6}>
-                    <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
+                    <SpotlightCard className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
                       <div className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">

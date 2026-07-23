@@ -14,6 +14,9 @@ import { ClickSpark } from '@/components/reactbits/ClickSpark';
 import { Dither } from '@/components/reactbits/Dither';
 import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
 import { CountUp } from '@/components/reactbits/CountUp';
+import { BackgroundCollage } from '@/components/reactbits/BackgroundCollage';
+import { Threads } from '@/components/reactbits/Threads';
+import { SoftAurora } from '@/components/reactbits/SoftAurora';
 import Link from 'next/link';
 
 function Icon({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -47,11 +50,14 @@ function DashboardContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden">
+      <BackgroundCollage />
+      <SoftAurora className="opacity-50" />
+      <Threads color="99,102,241" />
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero strip with aurora accent */}
-        <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 mb-8">
+        <section className="relative overflow-hidden rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur border border-gray-100 dark:border-slate-700 mb-8">
           <Aurora className="opacity-20 dark:opacity-40" />
           <Dither className="opacity-30" color1="#1e3a8a" color2="#0f172a" />
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500" />
@@ -66,7 +72,7 @@ function DashboardContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((s, i) => (
             <ScrollReveal key={s.label} delay={i * 0.08}>
-              <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 group" spotlightColor="rgba(59,130,246,0.18)">
+              <SpotlightCard className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border border-gray-100 dark:border-slate-700 group" spotlightColor="rgba(59,130,246,0.18)">
                 <div className="p-5 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{s.label}</p>
@@ -103,7 +109,7 @@ function DashboardContent() {
                   <Link key={d.id} href={`/datasets/${d.id}`}>
                     <ScrollReveal delay={i * 0.06}>
                       <TiltedCard className="h-full" maxTilt={6}>
-                        <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
+                        <SpotlightCard className="bg-white/80 dark:bg-slate-800/80 backdrop-blur border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
                           <div className="p-5">
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
@@ -130,7 +136,7 @@ function DashboardContent() {
         </div>
 
         {/* Quick Actions */}
-        <Card title="Quick Actions">
+        <Card title="Quick Actions" className="bg-white/80 dark:bg-slate-800/80 backdrop-blur">
           <div className="grid gap-3 sm:grid-cols-3">
             <Link href="/datasets">
               <ClickSpark>
