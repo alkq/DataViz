@@ -12,6 +12,8 @@ import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { TiltedCard } from '@/components/reactbits/TiltedCard';
 import { ClickSpark } from '@/components/reactbits/ClickSpark';
 import { Dither } from '@/components/reactbits/Dither';
+import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
+import { CountUp } from '@/components/reactbits/CountUp';
 import Link from 'next/link';
 
 function Icon({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -52,25 +54,30 @@ function DashboardContent() {
         <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 mb-8">
           <Aurora className="opacity-20 dark:opacity-40" />
           <Dither className="opacity-30" color1="#1e3a8a" color2="#0f172a" />
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500" />
           <div className="relative px-6 py-8 sm:px-8">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
               <ShinyText text="Dashboard" speed={5} />
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Welcome back, {user?.email}</p>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Welcome back, <span className="font-medium text-slate-900 dark:text-slate-100">{user?.email}</span></p>
           </div>
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((s) => (
-            <SpotlightCard key={s.label} className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 group" spotlightColor="rgba(59,130,246,0.18)">
-              <div className="p-5 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{s.label}</p>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">{s.value}</p>
+          {stats.map((s, i) => (
+            <ScrollReveal key={s.label} delay={i * 0.08}>
+              <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 group" spotlightColor="rgba(59,130,246,0.18)">
+                <div className="p-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{s.label}</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      {i < 3 ? <CountUp to={Number(s.value.replace(/,/g, '')) || 0} /> : s.value}
+                    </p>
+                  </div>
+                  <Icon className={s.tint}>{s.icon}</Icon>
                 </div>
-                <Icon className={s.tint}>{s.icon}</Icon>
-              </div>
-            </SpotlightCard>
+              </SpotlightCard>
+            </ScrollReveal>
           ))}
         </div>
 
@@ -90,31 +97,35 @@ function DashboardContent() {
               </p>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {datasets.slice(0, 6).map((d) => (
-                <Link key={d.id} href={`/datasets/${d.id}`}>
-                  <TiltedCard className="h-full" maxTilt={6}>
-                    <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
-                      <div className="p-5">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{d.row_count} rows · {d.columns.length} cols</p>
+            <ScrollReveal>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {datasets.slice(0, 6).map((d, i) => (
+                  <Link key={d.id} href={`/datasets/${d.id}`}>
+                    <ScrollReveal delay={i * 0.06}>
+                      <TiltedCard className="h-full" maxTilt={6}>
+                        <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
+                          <div className="p-5">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{d.row_count} rows · {d.columns.length} cols</p>
+                              </div>
+                              <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>{d.source_type.toUpperCase()}</Badge>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-1">
+                              {d.columns.slice(0, 4).map((c) => (
+                                <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">{c.name}</span>
+                              ))}
+                              {d.columns.length > 4 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 4}</span>}
+                            </div>
                           </div>
-                          <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>{d.source_type.toUpperCase()}</Badge>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {d.columns.slice(0, 4).map((c) => (
-                            <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">{c.name}</span>
-                          ))}
-                          {d.columns.length > 4 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 4}</span>}
-                        </div>
-                      </div>
-                    </SpotlightCard>
-                  </TiltedCard>
-                </Link>
-              ))}
-            </div>
+                        </SpotlightCard>
+                      </TiltedCard>
+                    </ScrollReveal>
+                  </Link>
+                ))}
+              </div>
+            </ScrollReveal>
           )}
         </div>
 

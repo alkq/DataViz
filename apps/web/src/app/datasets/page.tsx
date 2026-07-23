@@ -12,6 +12,7 @@ import { ShinyText } from '@/components/reactbits/ShinyText';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { TiltedCard } from '@/components/reactbits/TiltedCard';
 import { Dither } from '@/components/reactbits/Dither';
+import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
 import { createApiClient } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 
@@ -66,6 +67,7 @@ function DatasetsContent() {
         <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 mb-8">
           <Aurora className="opacity-20 dark:opacity-40" />
           <Dither className="opacity-30" color1="#1e3a8a" color2="#0f172a" />
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500" />
           <div className="relative px-6 py-8 sm:px-8">
             <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
               <ShinyText text="Datasets" speed={5} />
@@ -109,31 +111,35 @@ function DatasetsContent() {
           <Card><p className="text-center text-gray-500 py-12">No datasets yet. Upload a CSV or Excel file above to get started.</p></Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {datasets.map((d: DatasetSummary) => (
-              <Link key={d.id} href={`/datasets/${d.id}`}>
-                <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
-                  <div className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{d.row_count} rows · {d.columns.length} cols</p>
+            {datasets.map((d: DatasetSummary, i) => (
+            <Link key={d.id} href={`/datasets/${d.id}`}>
+              <ScrollReveal delay={i * 0.06}>
+                <TiltedCard className="h-full" maxTilt={6}>
+                  <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
+                    <div className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{d.row_count} rows · {d.columns.length} cols</p>
+                        </div>
+                        <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>{d.source_type.toUpperCase()}</Badge>
                       </div>
-                      <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>{d.source_type.toUpperCase()}</Badge>
+                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 flex flex-wrap gap-1">
+                        {d.columns.slice(0, 6).map((c) => (
+                          <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
+                            {c.name} <span className="text-gray-400">· {c.type}</span>
+                          </span>
+                        ))}
+                        {d.columns.length > 6 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 6}</span>}
+                      </div>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 flex flex-wrap gap-1">
-                      {d.columns.slice(0, 6).map((c) => (
-                        <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
-                          {c.name} <span className="text-gray-400">· {c.type}</span>
-                        </span>
-                      ))}
-                      {d.columns.length > 6 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 6}</span>}
-                    </div>
-                  </div>
-                </SpotlightCard>
-              </Link>
-            ))}
-          </div>
-        )}
+                  </SpotlightCard>
+                </TiltedCard>
+              </ScrollReveal>
+            </Link>
+          ))}
+        </div>
+      )}
       </main>
     </div>
   );

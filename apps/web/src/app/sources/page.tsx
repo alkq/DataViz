@@ -11,6 +11,7 @@ import { ShinyText } from '@/components/reactbits/ShinyText';
 import { SpotlightCard } from '@/components/reactbits/SpotlightCard';
 import { TiltedCard } from '@/components/reactbits/TiltedCard';
 import { Dither } from '@/components/reactbits/Dither';
+import { ScrollReveal } from '@/components/reactbits/ScrollReveal';
 
 function SourcesContent() {
   const { data: datasets, error, isLoading } = useDatasets();
@@ -23,6 +24,7 @@ function SourcesContent() {
         <section className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 mb-8">
           <Aurora className="opacity-20 dark:opacity-40" />
           <Dither className="opacity-30" color1="#1e3a8a" color2="#0f172a" />
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500" />
           <div className="relative flex items-center justify-between flex-wrap gap-4 px-6 py-8 sm:px-8">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
@@ -52,39 +54,41 @@ function SourcesContent() {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {datasets.map((d: DatasetSummary) => (
+            {datasets.map((d: DatasetSummary, i) => (
               <Link key={d.id} href={`/datasets/${d.id}`}>
-                <TiltedCard className="h-full" maxTilt={6}>
-                  <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
-                    <div className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            {d.row_count.toLocaleString()} rows · {d.columns.length} columns
-                          </p>
+                <ScrollReveal delay={i * 0.06}>
+                  <TiltedCard className="h-full" maxTilt={6}>
+                    <SpotlightCard className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 h-full group" spotlightColor="rgba(59,130,246,0.18)">
+                      <div className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {d.row_count.toLocaleString()} rows · {d.columns.length} columns
+                            </p>
+                          </div>
+                          <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>
+                            {d.source_type.toUpperCase()}
+                          </Badge>
                         </div>
-                        <Badge variant={d.source_type === 'excel' ? 'info' : 'default'}>
-                          {d.source_type.toUpperCase()}
-                        </Badge>
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 flex flex-wrap gap-1">
+                          {d.columns.slice(0, 6).map((c) => (
+                            <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
+                              {c.name} <span className="text-gray-400">· {c.type}</span>
+                            </span>
+                          ))}
+                          {d.columns.length > 6 && (
+                            <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 6}</span>
+                          )}
+                        </div>
+                        <p className="mt-4 text-xs text-gray-400">
+                          Imported {new Date(d.created_at).toLocaleDateString()} ·{' '}
+                          {new Date(d.created_at).toLocaleTimeString()}
+                        </p>
                       </div>
-                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 flex flex-wrap gap-1">
-                        {d.columns.slice(0, 6).map((c) => (
-                          <span key={c.name} className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
-                            {c.name} <span className="text-gray-400">· {c.type}</span>
-                          </span>
-                        ))}
-                        {d.columns.length > 6 && (
-                          <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 6}</span>
-                        )}
-                      </div>
-                      <p className="mt-4 text-xs text-gray-400">
-                        Imported {new Date(d.created_at).toLocaleDateString()} ·{' '}
-                        {new Date(d.created_at).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </SpotlightCard>
-                </TiltedCard>
+                    </SpotlightCard>
+                  </TiltedCard>
+                </ScrollReveal>
               </Link>
             ))}
           </div>
