@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useDataset, useDatasetRows, type DatasetSummary } from '@/hooks/use-api';
 import { Header } from '@/components/ui/Header';
-import { Card, Button, Select, LoadingSpinner } from '@/components/ui/common';
+import { Card, Button, LoadingSpinner } from '@/components/ui/common';
+import { CustomSelect } from '@/components/ui/Dropdown';
 import { Providers } from '@/components/Providers';
 import { DatasetChart } from '@/components/charts/DatasetChart';
 
@@ -149,22 +150,22 @@ function DatasetViewContent() {
         {dataset && (
           <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
             <div className="grid gap-4 md:grid-cols-4">
-              <Select
+              <CustomSelect
                 label="X axis (category / value)"
                 value={effectiveX}
-                onChange={(e) => setXColumn(e.target.value)}
+                onChange={(v) => setXColumn(v)}
                 options={allCols.map((c) => ({ value: c, label: c }))}
               />
-              <Select
+              <CustomSelect
                 label="Y axis (numeric)"
                 value={effectiveY}
-                onChange={(e) => setYColumn(e.target.value)}
+                onChange={(v) => setYColumn(v)}
                 options={(numberCols.length ? numberCols : allCols).map((c) => ({ value: c, label: c }))}
               />
-              <Select
+              <CustomSelect
                 label="Chart type"
                 value={chartType}
-                onChange={(e) => setChartType(e.target.value as 'line' | 'bar')}
+                onChange={(v) => setChartType(v as 'line' | 'bar')}
                 options={[{ value: 'line', label: 'Line' }, { value: 'bar', label: 'Bar' }]}
               />
               <div className="flex items-end">
