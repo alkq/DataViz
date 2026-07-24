@@ -1,17 +1,33 @@
-import useSWR from 'swr';
+import useSWR, { type SWRConfiguration } from 'swr';
 import { createApiClient } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import { Device, TelemetryResponse, Dashboard } from '@/types';
 
-const fetcher = (url: string) => 
-  createApiClient(() => useAuthStore.getState().accessToken).get<any>(url);
+// Gate every authed fetch on auth hydration + a present token. Without this,
+// SWR fires on first render while the persisted token is still null (zustand
+// rehydrates async), the API 401s, and with revalidateOnFocus:false the error
+// sticks — so returning users see empty/zero datasets.
+function authedFetcher(url: string) {
+  const { accessToken } = useAuthStore.getState();
+  return createApiClient(() => accessToken).get<any>(url);
+}
+
+function useAuthedSWR<T>(key: string | null, config?: SWRConfiguration) {
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const hasToken = useAuthStore((s) => !!s.accessToken);
+  const enabled = hydrated && hasToken;
+  return useSWR<T>(enabled ? key : null, authedFetcher as any, {
+    revalidateOnFocus: true,
+    ...config,
+  });
+}
 
 export function useDevices() {
-  return useSWR<Device[]>('/devices', fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<Device[]>('/devices');
 }
 
 export function useDevice(id: string) {
-  return useSWR<Device>(id ? `/devices/${id}` : null, fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<Device>(id ? `/devices/${id}` : null);
 }
 
 export function useTelemetryQuery(params: {
@@ -22,26 +38,25 @@ export function useTelemetryQuery(params: {
   resolution: string;
 }) {
   const queryString = new URLSearchParams(params as Record<string, string>).toString();
-  return useSWR<TelemetryResponse>(`/telemetry/query?${queryString}`, fetcher, { 
-    revalidateOnFocus: false,
+  return useAuthedSWR<TelemetryResponse>(`/telemetry/query?${queryString}`, {
     dedupingInterval: 30000,
   });
 }
 
 export function useDeviceMetadata() {
-  return useSWR<any[]>('/telemetry/devices/metadata', fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<any[]>('/telemetry/devices/metadata');
 }
 
 export function useDashboards() {
-  return useSWR<Dashboard[]>('/dashboards', fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<Dashboard[]>('/dashboards');
 }
 
 export function useDefaultDashboard() {
-  return useSWR<Dashboard>('/dashboards/default', fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<Dashboard>('/dashboards/default');
 }
 
 export function useDashboard(id: string) {
-  return useSWR<Dashboard>(id ? `/dashboards/${id}` : null, fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<Dashboard>(id ? `/dashboards/${id}` : null);
 }
 
 export interface DatasetSummary {
@@ -56,17 +71,15 @@ export interface DatasetSummary {
 }
 
 export function useDatasets() {
-  return useSWR<DatasetSummary[]>('/datasets', fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<DatasetSummary[]>('/datasets');
 }
 
 export function useDataset(id: string | string[]) {
-  return useSWR<DatasetSummary>(id ? `/datasets/${id}` : null, fetcher, { revalidateOnFocus: false });
+  return useAuthedSWR<DatasetSummary>(id ? `/datasets/${id}` : null);
 }
 
 export function useDatasetRows(id: string | string[], limit = 200, offset = 0) {
-  return useSWR<Record<string, unknown>[]>(
+  return useAuthedSWR<Record<string, unknown>[]>(
     id ? `/datasets/${id}/rows?limit=${limit}&offset=${offset}` : null,
-    fetcher,
-    { revalidateOnFocus: false },
   );
 }
