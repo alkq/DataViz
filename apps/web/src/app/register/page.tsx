@@ -67,7 +67,7 @@ function RegisterContent() {
           throw new Error('Failed to retrieve user profile');
         }
         const user = await userResponse.json();
-        login(data.accessToken, user);
+        login(data.accessToken, user, data.expiresIn);
         window.location.href = getRedirect();
       } else {
         setError('No access token received');

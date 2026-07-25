@@ -70,6 +70,51 @@ function DatasetsContent() {
     }
   };
 
+  const downloadCsv = async (d: DatasetSummary) => {
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+    const token = useAuthStore.getState().accessToken;
+    const res = await fetch(`${base}/datasets/${d.id}/rows?limit=1000&offset=0`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Failed to fetch rows');
+    const rows: Record<string, unknown>[] = await res.json();
+    const cols = d.columns.map((c) => c.name);
+    const escape = (v: unknown) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const csv = [cols.join(','), ...rows.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${d.name.replace(/\.[^.]+$/, '')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const handleDelete = async (d: DatasetSummary) => {
+    if (!window.confirm(`Delete dataset "${d.name}"? This cannot be undone.`)) return;
+    setDeletingId(d.id);
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const token = useAuthStore.getState().accessToken;
+      const res = await fetch(`${base}/datasets/${d.id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      await mutate();
+    } catch (err: any) {
+      setUploadError(err.message || 'Delete failed');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -204,6 +249,23 @@ function DatasetsContent() {
                           </span>
                         ))}
                         {d.columns.length > 6 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 6}</span>}
+                      </div>
+                      <div className="mt-4 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadCsv(d); }}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium"
+                        >
+                          Export CSV
+                        </button>
+                        <button
+                          type="button"
+                          disabled={deletingId === d.id}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(d); }}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 font-medium disabled:opacity-50"
+                        >
+                          {deletingId === d.id ? 'Deleting…' : 'Delete'}
+                        </button>
                       </div>
                     </div>
                   </SpotlightCard>

@@ -62,7 +62,7 @@ function LoginContent() {
         }
 
         const user = await userResponse.json();
-        login(data.accessToken, user);
+        login(data.accessToken, user, data.expiresIn);
         window.location.href = getRedirect();
       } else {
         setError('No access token received');
@@ -89,7 +89,7 @@ function LoginContent() {
           headers: { Authorization: `Bearer ${data.accessToken}` },
         });
         const user = await userResponse.json();
-        login(data.accessToken, user);
+        login(data.accessToken, user, data.expiresIn);
         window.location.href = '/dashboard';
       } else {
         setError(data?.error || 'Failed to generate dev token');

@@ -9,16 +9,42 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
+  // CRITICAL: never accept the hardcoded fallback secret in production.
+  // If JWT_SECRET is missing/empty in prod, token verification/forgery would be
+  // possible by anyone — so we refuse to boot rather than run insecurely.
+  const jwtSecret = configService.get<string>('JWT_SECRET');
+  if (process.env.NODE_ENV === 'production' && (!jwtSecret || jwtSecret === 'dev-secret-change-in-production')) {
+    throw new Error(
+      'FATAL: JWT_SECRET is not set (or still the dev default) in production. ' +
+      'Refusing to start with a forgeable token secret.',
+    );
+  }
+
   app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        // API is JSON-only; block all script/style/object sources.
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:'],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+    },
     crossOriginEmbedderPolicy: false,
   }));
 
+  const corsOrigin = (configService.get<string>('CORS_ORIGIN') || 'http://localhost:3000')
+    .split(',')
+    .map((o) => o.trim());
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGIN') || 'http://localhost:3000',
+    origin: corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Nonce'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   app.setGlobalPrefix('api');

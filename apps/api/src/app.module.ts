@@ -20,8 +20,15 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([
       {
+        name: 'default',
         ttl: 60000,
         limit: 100,
+      },
+      {
+        name: 'auth',
+        // Strict limit on credential endpoints to blunt brute-force / enumeration.
+        ttl: 60000,
+        limit: 10,
       },
     ]),
     ConfigurationModule,

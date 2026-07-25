@@ -8,6 +8,7 @@ import { Header } from '@/components/ui/Header';
 import { Card, Button, LoadingSpinner } from '@/components/ui/common';
 import { CustomSelect } from '@/components/ui/Dropdown';
 import { Providers } from '@/components/Providers';
+import { useAuthStore } from '@/lib/auth-store';
 import { DatasetChart } from '@/components/charts/DatasetChart';
 import { BackgroundCollage } from '@/components/reactbits/BackgroundCollage';
 import { SoftAurora } from '@/components/reactbits/SoftAurora';
@@ -138,6 +139,32 @@ function DatasetViewContent() {
 
   const displayRows = formula.trim() ? computedRows : rows;
 
+  const downloadCsv = async () => {
+    if (!dataset || !id) return;
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+    const token = useAuthStore.getState().accessToken;
+    const res = await fetch(`${base}/datasets/${id}/rows?limit=1000&offset=0`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) return;
+    const dataRows: Record<string, unknown>[] = await res.json();
+    const cols = dataset.columns.map((c) => c.name);
+    const escape = (v: unknown) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const csv = [cols.join(','), ...dataRows.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${dataset.name.replace(/\.[^.]+$/, '')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -148,11 +175,14 @@ function DatasetViewContent() {
       <Header />
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link href="/datasets" className="text-sm text-blue-600 hover:underline">← All datasets</Link>
-        <div className="mt-2 mb-6">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{dataset?.name || 'Dataset'}</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">
-            {dataset?.row_count} rows · {dataset?.columns.length} columns · {dataset?.source_type.toUpperCase()}
-          </p>
+        <div className="mt-2 mb-6 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">{dataset?.name || 'Dataset'}</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
+              {dataset?.row_count} rows · {dataset?.columns.length} columns · {dataset?.source_type.toUpperCase()}
+            </p>
+          </div>
+          <Button variant="secondary" onClick={downloadCsv} className="shrink-0">Export CSV</Button>
         </div>
 
         {dataset && (

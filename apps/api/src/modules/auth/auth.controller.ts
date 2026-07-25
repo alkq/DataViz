@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { IsEmail, IsString, MinLength } from 'class-validator'; // 1. Import class-validator decorators
 import { AuthService, TokenPayload } from './auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -32,6 +33,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Public()
+  @Throttle({ auth: {} })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new local user' })
@@ -42,6 +44,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ auth: {} })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate with email and password' })
@@ -52,6 +55,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ auth: {} })
   @Post('keycloak-login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Exchange Keycloak token for API JWT' })
@@ -85,6 +89,7 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Throttle({ auth: {} })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
