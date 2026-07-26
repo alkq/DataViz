@@ -277,7 +277,7 @@ function DatasetViewContent() {
         </div>
 
         {dataset && (
-          <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
+          <Card className="relative z-20 mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
             <div className="grid gap-4 md:grid-cols-4">
               <CustomSelect
                 label="X axis (category / value)"
