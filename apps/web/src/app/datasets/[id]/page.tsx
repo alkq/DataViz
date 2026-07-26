@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, Suspense, useMemo, useEffect } from 'react';
+import type * as echarts from 'echarts';
+import { useTheme } from 'next-themes';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useDataset, useDatasetRows, type DatasetSummary } from '@/hooks/use-api';
@@ -113,6 +115,57 @@ function DatasetViewContent() {
   const [showData, setShowData] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const chartWrapRef = React.useRef<HTMLDivElement>(null);
+  const [chartInstance, setChartInstance] = useState<echarts.ECharts | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const { theme } = useTheme();
+  // Data table interactions (ported from the Python/Altair table viewer)
+  const [search, setSearch] = useState('');
+  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
+  const [colMenu, setColMenu] = useState<string | null>(null);
+  const [visOpen, setVisOpen] = useState(false);
+
+  const visibleCols = useMemo(
+    () => (calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols).filter((c) => !hiddenCols.has(c)),
+    [allCols, calcCol, hiddenCols],
+  );
+
+  const toggleSort = (c: string) => {
+    if (sortCol === c) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortCol(c); setSortDir('asc'); }
+  };
+
+  const exportCsvFromRows = (rowsToExport: Record<string, unknown>[], cols: string[], filename: string) => {
+    const escape = (v: unknown) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const csv = [cols.join(','), ...rowsToExport.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportChart = (type: 'png' | 'svg') => {
+    if (!chartInstance) return;
+    const url = chartInstance.getDataURL({ type, pixelRatio: 2, backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff' });
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chart.${type}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setMenuOpen(false);
+  };
+
   const toggleFullscreen = () => {
     const el = chartWrapRef.current;
     if (!el) return;
@@ -156,6 +209,26 @@ function DatasetViewContent() {
   }, [rows, numberCols]);
 
   const displayRows = formula.trim() ? computedRows : rows;
+
+  const tableRows = React.useMemo(() => {
+    let rowsArr = displayRows || [];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rowsArr = rowsArr.filter((r) => visibleCols.some((c) => String(r[c] ?? '').toLowerCase().includes(q)));
+    }
+    if (sortCol) {
+      rowsArr = [...rowsArr].sort((a, b) => {
+        const av = a[sortCol];
+        const bv = b[sortCol];
+        const an = toNumber(av);
+        const bn = toNumber(bv);
+        const useNum = !isNaN(an) && !isNaN(bn);
+        const cmp = useNum ? an - bn : String(av ?? '').localeCompare(String(bv ?? ''));
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    }
+    return rowsArr;
+  }, [displayRows, search, sortCol, sortDir, visibleCols]);
 
   const downloadCsv = async () => {
     if (!dataset || !id) return;
@@ -353,6 +426,7 @@ function DatasetViewContent() {
                 yColumn={calcCol || effectiveY}
                 chartType={chartType}
                 height={isFullscreen ? Math.max(420, (typeof window !== 'undefined' ? window.innerHeight - 160 : 480)) : 420}
+                onChartReady={setChartInstance}
               />
               {/* Floating control cluster (matches the requested feature) */}
               <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-2">
@@ -392,75 +466,144 @@ function DatasetViewContent() {
           )}
           {showData && (
             <div className="mt-4">
+              {/* Table toolbar (search, column visibility, CSV, ⋯ menu) */}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <div className="flex items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 px-2 py-1.5 flex-1 min-w-[160px]">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14z" /></svg>
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search rows…"
+                    className="bg-transparent text-sm text-slate-800 dark:text-slate-100 focus:outline-none w-full"
+                  />
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setVisOpen((v) => !v)}
+                    className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700"
+                  >
+                    Columns {visibleCols.length}/{allCols.length + (calcCol && !allCols.includes(calcCol) ? 1 : 0)}
+                  </button>
+                  {visOpen && (
+                    <div className="absolute right-0 mt-1 z-30 w-56 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl p-2">
+                      <button
+                        type="button"
+                        onClick={() => setHiddenCols(new Set())}
+                        className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700 text-blue-600 font-medium"
+                      >
+                        Select all
+                      </button>
+                      <div className="my-1 border-t border-gray-100 dark:border-slate-700" />
+                      {(calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols).map((c) => (
+                        <label key={c} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer text-sm text-gray-700 dark:text-gray-200">
+                          <input
+                            type="checkbox"
+                            checked={!hiddenCols.has(c)}
+                            onChange={(e) => {
+                              setHiddenCols((prev) => {
+                                const n = new Set(prev);
+                                if (e.target.checked) n.delete(c); else n.add(c);
+                                return n;
+                              });
+                            }}
+                            className="accent-blue-600"
+                          />
+                          {c}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => exportCsvFromRows(tableRows, visibleCols, `${dataset?.name?.replace(/\.[^.]+$/, '') || 'dataset'}.csv`)}
+                  className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+                  Download CSV
+                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen((v) => !v)}
+                    aria-label="More options"
+                    className="w-8 h-8 grid place-items-center rounded-full border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+                  </button>
+                  {menuOpen && (
+                    <div className="absolute right-0 mt-1 z-30 w-48 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl py-1 text-sm">
+                      <button type="button" onClick={() => exportChart('png')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as PNG</button>
+                      <button type="button" onClick={() => exportChart('svg')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as SVG</button>
+                      <button type="button" onClick={() => { setSourceOpen(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">View Source</button>
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="overflow-x-auto -mx-4 sm:mx-0">
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-600">
-                      {(() => {
-                        const cols = calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols;
-                        return cols.map((c) => (
-                          <th key={c} className="px-3 py-2 font-medium whitespace-nowrap">{c}</th>
-                        ));
-                      })()}
+                      <th className="px-3 py-2 font-medium whitespace-nowrap">#</th>
+                      {visibleCols.map((c) => (
+                        <th key={c} className="px-3 py-2 font-medium whitespace-nowrap group relative">
+                          <button type="button" onClick={() => toggleSort(c)} className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-white">
+                            {c}
+                            {sortCol === c && <span className="text-blue-500">{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setColMenu(colMenu === c ? null : c)}
+                            className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            aria-label={`${c} options`}
+                          >
+                            <svg className="w-3.5 h-3.5 inline" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+                          </button>
+                          {colMenu === c && (
+                            <div className="absolute left-0 mt-1 z-30 w-44 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl py-1 text-sm">
+                              <button type="button" onClick={() => { toggleSort(c); setColMenu(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Sort ascending</button>
+                              <button type="button" onClick={() => { setSortCol(c); setSortDir('desc'); setColMenu(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Sort descending</button>
+                              <button type="button" onClick={() => { setHiddenCols((prev) => new Set(prev).add(c)); setColMenu(null); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Hide column</button>
+                            </div>
+                          )}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {(displayRows || []).slice(0, 100).map((r, i) => {
-                      const cols = calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols;
-                      return (
-                        <tr key={i} className="border-b border-gray-100 dark:border-slate-700">
-                          {cols.map((c) => (
-                            <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-slate-300">{String(r[c] ?? '')}</td>
-                          ))}
-                        </tr>
-                      );
-                    })}
+                    {tableRows.slice(0, 100).map((r, i) => (
+                      <tr key={i} className="border-b border-gray-100 dark:border-slate-700">
+                        <td className="px-3 py-2 whitespace-nowrap text-gray-400">{i}</td>
+                        {visibleCols.map((c) => (
+                          <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-slate-300">{String(r[c] ?? '')}</td>
+                        ))}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-              {displayRows && displayRows.length > 100 && (
-                <p className="text-xs text-gray-400 mt-2">Showing first 100 of {displayRows.length} rows.</p>
+              {tableRows.length > 100 && (
+                <p className="text-xs text-gray-400 mt-2">Showing first 100 of {tableRows.length} rows.</p>
               )}
+            </div>
+          )}
+          {sourceOpen && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4" onClick={() => setSourceOpen(false)}>
+              <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-2xl max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">Chart source (ECharts option)</h3>
+                  <button type="button" onClick={() => setSourceOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">✕</button>
+                </div>
+                <pre className="p-4 text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{chartInstance ? JSON.stringify(chartInstance.getOption(), null, 2) : '// chart not ready'}</pre>
+              </div>
             </div>
           )}
         </Card>
 
         <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Data preview</h2>
-          {isLoading ? (
-            <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
-          ) : !displayRows || displayRows.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No rows.</p>
-          ) : (
-            (() => {
-              const cols = calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols;
-              return (
-                <div className="overflow-x-auto -mx-4 sm:mx-0">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-600">
-                        {cols.map((c) => (
-                          <th key={c} className="px-3 py-2 font-medium whitespace-nowrap">{c}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayRows.slice(0, 100).map((r, i) => (
-                        <tr key={i} className="border-b border-gray-100 dark:border-slate-700">
-                          {cols.map((c) => (
-                            <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-slate-300">{String(r[c] ?? '')}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()
-          )}
-          {displayRows && displayRows.length > 100 && (
-            <p className="text-xs text-gray-400 mt-2">Showing first 100 of {displayRows.length} rows.</p>
-          )}
+          <p className="text-sm text-gray-500 dark:text-gray-400">Use the <span className="font-medium">Show data</span> button on the chart above to open the interactive table — search, sort, hide columns, and export.</p>
         </Card>
       </main>
     </div>

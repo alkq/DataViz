@@ -13,6 +13,7 @@ interface DatasetChartProps {
   yColumn: string;
   chartType: ChartType;
   height?: number;
+  onChartReady?: (chart: echarts.ECharts | null) => void;
 }
 
 function toNumber(v: unknown): number {
@@ -21,7 +22,7 @@ function toNumber(v: unknown): number {
   return isNaN(n) ? NaN : n;
 }
 
-export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420 }: DatasetChartProps) {
+export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, onChartReady }: DatasetChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const { theme = 'light' } = useTheme();
@@ -120,15 +121,17 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420 }
     if (!chartRef.current) return;
     const chart = echarts.init(chartRef.current, theme);
     chartInstanceRef.current = chart;
+    onChartReady?.(chart);
     chart.setOption(chartOptions);
     const handleResize = () => chartInstanceRef.current?.resize();
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
+      onChartReady?.(null);
       chartInstanceRef.current?.dispose();
       chartInstanceRef.current = null;
     };
-  }, [chartOptions, theme]);
+  }, [chartOptions, theme, onChartReady]);
 
   if (points.length === 0) {
     return <div className="text-center text-gray-500 py-12">No numeric data to plot for the selected columns.</div>;
