@@ -58,6 +58,16 @@ export function CountUp({
       { threshold: 0.2 },
     );
     obs.observe(el);
+    // If the element is already in the viewport on mount (common on first load),
+    // IntersectionObserver fires asynchronously; kick it immediately so the
+    // number is correct without waiting for a scroll/refresh.
+    requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        seen.current = true;
+        animateTo(to);
+      }
+    });
     return () => obs.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -65,8 +75,13 @@ export function CountUp({
   // Re-animate whenever `to` changes; if already visible, animate immediately,
   // otherwise it will animate on first intersection (above).
   useEffect(() => {
-    if (seen.current) animateTo(to);
-    else valRef.current = to; // will animate from correct base once seen
+    if (seen.current) {
+      animateTo(to);
+    } else {
+      // Not yet seen: set the value directly so it's correct the moment it shows.
+      valRef.current = to;
+      setVal(to);
+    }
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
