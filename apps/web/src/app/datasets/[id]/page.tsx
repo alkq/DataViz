@@ -10,6 +10,8 @@ import { warmUpApi } from '@/lib/keepalive';
 import { Header } from '@/components/ui/Header';
 import { Card, Button, LoadingSpinner } from '@/components/ui/common';
 import { CustomSelect } from '@/components/ui/Dropdown';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Providers } from '@/components/Providers';
 import { useAuthStore } from '@/lib/auth-store';
 import { DatasetChart } from '@/components/charts/DatasetChart';
@@ -277,7 +279,9 @@ function DatasetViewContent() {
               {dataset?.row_count} rows · {dataset?.columns.length} columns · {dataset?.source_type.toUpperCase()}
             </p>
           </div>
-          <Button variant="secondary" onClick={downloadCsv} className="shrink-0">Export CSV</Button>
+          <Tooltip content="Download all rows as a CSV file.">
+            <Button variant="secondary" onClick={downloadCsv} className="shrink-0">Export CSV</Button>
+          </Tooltip>
         </div>
 
         {dataset && (
@@ -419,7 +423,13 @@ function DatasetViewContent() {
             </div>
           </div>
           {isLoading ? (
-            <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
+            <div className="space-y-3">
+              <Skeleton className="h-[420px] w-full rounded-xl" />
+              <div className="flex gap-2">
+                <Skeleton className="h-8 w-24 rounded-full" />
+                <Skeleton className="h-8 w-20 rounded-lg" />
+              </div>
+            </div>
           ) : rowsError ? (
             <div className="rounded-lg border border-amber-500/40 bg-amber-50/60 dark:bg-amber-900/20 px-4 py-3">
               <p className="text-amber-700 dark:text-amber-300 text-sm font-medium">The API is waking up after idle — give it ~30s and it'll load automatically.</p>
@@ -437,36 +447,42 @@ function DatasetViewContent() {
               />
               {/* Floating control cluster (matches the requested feature) */}
               <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowData((v) => !v)}
-                  className="rounded-full bg-slate-700/90 hover:bg-slate-600 text-white text-sm px-4 py-2 shadow-lg backdrop-blur"
-                >
-                  {showData ? 'Hide data' : 'Show data'}
-                </button>
-                <div className="flex items-center gap-1 rounded-lg bg-slate-800/90 p-1 shadow-lg backdrop-blur">
+                <Tooltip content={showData ? 'Hide the data table' : 'Show the data table'} side="left">
                   <button
                     type="button"
                     onClick={() => setShowData((v) => !v)}
-                    aria-label="Toggle data table"
-                    title="Toggle data table"
-                    className={`p-2 rounded ${showData ? 'bg-blue-600 text-white' : 'text-gray-200 hover:bg-slate-700'}`}
+                    className="rounded-full bg-slate-700/90 hover:bg-slate-600 text-white text-sm px-4 py-2 shadow-lg backdrop-blur"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+                    {showData ? 'Hide data' : 'Show data'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={toggleFullscreen}
-                    aria-label="Toggle fullscreen"
-                    title="Toggle fullscreen"
-                    className="p-2 rounded text-gray-200 hover:bg-slate-700"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                    </svg>
-                  </button>
+                </Tooltip>
+                <div className="flex items-center gap-1 rounded-lg bg-slate-800/90 p-1 shadow-lg backdrop-blur">
+                  <Tooltip content="Toggle data table" side="left">
+                    <button
+                      type="button"
+                      onClick={() => setShowData((v) => !v)}
+                      aria-label="Toggle data table"
+                      title="Toggle data table"
+                      className={`p-2 rounded ${showData ? 'bg-blue-600 text-white' : 'text-gray-200 hover:bg-slate-700'}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </Tooltip>
+                  <Tooltip content={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} side="left">
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      aria-label="Toggle fullscreen"
+                      title="Toggle fullscreen"
+                      className="p-2 rounded text-gray-200 hover:bg-slate-700"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from '@/components/Providers';
 import { TokenRefresher } from '@/components/TokenRefresher';
 import { ApiWarmer } from '@/components/ApiWarmer';
+import { SkeletonStyles } from '@/components/ui/Skeleton';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
           {children}
           <TokenRefresher />
           <ApiWarmer />
+          <SkeletonStyles />
         </Providers>
       </body>
     </html>

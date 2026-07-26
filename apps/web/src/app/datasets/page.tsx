@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useDatasets, type DatasetSummary } from '@/hooks/use-api';
 import { Header } from '@/components/ui/Header';
 import { Card, Button, Input, LoadingSpinner, Badge } from '@/components/ui/common';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { DatasetCardSkeleton } from '@/components/ui/Skeleton';
 import { Providers } from '@/components/Providers';
 import { Aurora } from '@/components/reactbits/Aurora';
 import { ShinyText } from '@/components/reactbits/ShinyText';
@@ -99,6 +101,9 @@ function DatasetsContent() {
   const handleDelete = async (d: DatasetSummary) => {
     if (!window.confirm(`Delete dataset "${d.name}"? This cannot be undone.`)) return;
     setDeletingId(d.id);
+    // Optimistic: drop it from the list instantly, roll back if the API fails.
+    const prev = datasets;
+    mutate((datasets || []).filter((x) => x.id !== d.id), { revalidate: false });
     try {
       const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
       const token = useAuthStore.getState().accessToken;
@@ -109,6 +114,7 @@ function DatasetsContent() {
       if (!res.ok) throw new Error('Delete failed');
       await mutate();
     } catch (err: any) {
+      mutate(prev, { revalidate: false }); // rollback
       setUploadError(err.message || 'Delete failed');
     } finally {
       setDeletingId(null);
@@ -222,7 +228,9 @@ function DatasetsContent() {
         </Card>
 
         {isLoading ? (
-          <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => <DatasetCardSkeleton key={i} />)}
+          </div>
         ) : error ? (
           <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur"><p className="text-red-600">Failed to load datasets: {error.message}</p></Card>
         ) : !datasets || datasets.length === 0 ? (
@@ -251,21 +259,25 @@ function DatasetsContent() {
                         {d.columns.length > 6 && <span className="text-xs px-2 py-0.5 text-gray-400">+{d.columns.length - 6}</span>}
                       </div>
                       <div className="mt-4 flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadCsv(d); }}
-                          className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium"
-                        >
-                          Export CSV
-                        </button>
-                        <button
-                          type="button"
-                          disabled={deletingId === d.id}
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(d); }}
-                          className="text-xs px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 font-medium disabled:opacity-50"
-                        >
-                          {deletingId === d.id ? 'Deleting…' : 'Delete'}
-                        </button>
+                        <Tooltip content="Download this dataset as a CSV file.">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadCsv(d); }}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 font-medium"
+                          >
+                            Export CSV
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Permanently remove this dataset.">
+                          <button
+                            type="button"
+                            disabled={deletingId === d.id}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(d); }}
+                            className="text-xs px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 font-medium disabled:opacity-50"
+                          >
+                            {deletingId === d.id ? 'Deleting…' : 'Delete'}
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                   </SpotlightCard>

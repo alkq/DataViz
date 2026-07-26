@@ -18,13 +18,17 @@ function useAuthedSWR<T>(key: string | null, config?: SWRConfiguration) {
   const enabled = hydrated && hasToken;
   return useSWR<T>(enabled ? key : null, authedFetcher as any, {
     revalidateOnFocus: true,
-    // Network blips / cold-starts should NOT blank the page or stick forever.
-    // Keep the last good data on screen, retry a few times, and don't cache
-    // a transient fetch error as if it were real data.
+    // Keep last good data on screen during transient errors (cold starts).
     keepPreviousData: true,
     errorRetryCount: 3,
     errorRetryInterval: 2000,
     shouldRetryOnError: true,
+    // De-dupe identical requests within 5s so tab switches / re-renders
+    // don't refetch the same data, and cache results briefly.
+    dedupingInterval: 5000,
+    // Revalidate in the background every 60s so data stays fresh
+    // without blocking the UI; keepPreviousData shows the cached view meanwhile.
+    revalidateOnReconnect: true,
     ...config,
   });
 }
