@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/Providers';
 import { TokenRefresher } from '@/components/TokenRefresher';
+import { ApiWarmer } from '@/components/ApiWarmer';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <TokenRefresher />
+          <ApiWarmer />
         </Providers>
       </body>
     </html>

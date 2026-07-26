@@ -18,6 +18,13 @@ function useAuthedSWR<T>(key: string | null, config?: SWRConfiguration) {
   const enabled = hydrated && hasToken;
   return useSWR<T>(enabled ? key : null, authedFetcher as any, {
     revalidateOnFocus: true,
+    // Network blips / cold-starts should NOT blank the page or stick forever.
+    // Keep the last good data on screen, retry a few times, and don't cache
+    // a transient fetch error as if it were real data.
+    keepPreviousData: true,
+    errorRetryCount: 3,
+    errorRetryInterval: 2000,
+    shouldRetryOnError: true,
     ...config,
   });
 }

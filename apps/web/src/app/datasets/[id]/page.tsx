@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useDataset, useDatasetRows, type DatasetSummary } from '@/hooks/use-api';
+import { warmUpApi } from '@/lib/keepalive';
 import { Header } from '@/components/ui/Header';
 import { Card, Button, LoadingSpinner } from '@/components/ui/common';
 import { CustomSelect } from '@/components/ui/Dropdown';
@@ -175,6 +176,9 @@ function DatasetViewContent() {
       document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});
     }
   };
+  useEffect(() => {
+    warmUpApi();
+  }, []);
   useEffect(() => {
     const onFs = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onFs);
@@ -417,7 +421,10 @@ function DatasetViewContent() {
           {isLoading ? (
             <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
           ) : rowsError ? (
-            <p className="text-red-600">Failed to load rows: {rowsError.message}</p>
+            <div className="rounded-lg border border-amber-500/40 bg-amber-50/60 dark:bg-amber-900/20 px-4 py-3">
+              <p className="text-amber-700 dark:text-amber-300 text-sm font-medium">The API is waking up after idle — give it ~30s and it'll load automatically.</p>
+              <p className="text-amber-600/80 dark:text-amber-400/70 text-xs mt-1">If it doesn't, refresh the page. (detail: {rowsError.message})</p>
+            </div>
           ) : (
             <div ref={chartWrapRef} className="relative">
               <DatasetChart
