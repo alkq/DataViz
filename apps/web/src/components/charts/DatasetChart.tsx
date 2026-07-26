@@ -5,13 +5,14 @@ import * as echarts from 'echarts';
 import { useTheme } from 'next-themes';
 
 type Row = Record<string, unknown>;
-type ChartType = 'line' | 'bar';
+type ChartType = 'line' | 'bar' | 'scatter' | 'histogram';
 
 interface DatasetChartProps {
   rows: Row[];
   xColumn: string;
   yColumn: string;
   chartType: ChartType;
+  height?: number;
 }
 
 function toNumber(v: unknown): number {
@@ -20,18 +21,21 @@ function toNumber(v: unknown): number {
   return isNaN(n) ? NaN : n;
 }
 
-export function DatasetChart({ rows, xColumn, yColumn, chartType }: DatasetChartProps) {
+export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420 }: DatasetChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const { theme = 'light' } = useTheme();
 
+  const isHistogram = chartType === 'histogram';
+
   const { points, xIsNumeric } = useMemo(() => {
+    const srcCol = isHistogram ? yColumn : xColumn;
     const pts = rows
-      .map((r) => ({ x: r[xColumn], y: toNumber(r[yColumn]) }))
-      .filter((p) => !isNaN(p.y));
+      .map((r) => ({ x: r[srcCol], y: toNumber(r[yColumn]) }))
+      .filter((p) => !isHistogram || !isNaN(toNumber(p.x)));
     const numericX = pts.length > 0 && pts.every((p) => !isNaN(toNumber(p.x)));
     return { points: pts, xIsNumeric: numericX };
-  }, [rows, xColumn, yColumn]);
+  }, [rows, xColumn, yColumn, isHistogram]);
 
   const chartOptions = useMemo(() => {
     const isDark = theme === 'dark';
@@ -39,10 +43,37 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType }: DatasetChart
     const gridColor = isDark ? '#334155' : '#e2e8f0';
     const axisColor = isDark ? '#64748b' : '#94a3b8';
 
+    // Histogram: bin a single numeric column and count frequencies.
+    if (isHistogram) {
+      const values = points.map((p) => toNumber(p.x)).filter((v) => !isNaN(v));
+      const min = values.length ? Math.min(...values) : 0;
+      const max = values.length ? Math.max(...values) : 1;
+      const binCount = Math.min(20, Math.max(5, Math.round(Math.sqrt(values.length)) || 5));
+      const width = (max - min) / binCount || 1;
+      const bins: Record<string, number> = {};
+      for (const v of values) {
+        const idx = Math.min(binCount - 1, Math.floor((v - min) / width));
+        const label = `${(min + idx * width).toFixed(1)}–${(min + (idx + 1) * width).toFixed(1)}`;
+        bins[label] = (bins[label] || 0) + 1;
+      }
+      const cats = Object.keys(bins);
+      return {
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', backgroundColor: isDark ? '#1e293b' : '#fff', borderColor: gridColor, textStyle: { color: textColor } },
+        grid: { left: 70, right: 30, top: 20, bottom: 70 },
+        xAxis: { type: 'category', data: cats, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 10, rotate: cats.length > 8 ? 30 : 0, hideOverlap: true }, name: xColumn, nameLocation: 'middle', nameGap: 38, nameTextStyle: { color: textColor } },
+        yAxis: { type: 'value', axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }, name: 'Count', nameTextStyle: { color: textColor } },
+        series: [{ name: 'Count', type: 'bar', data: cats.map((c) => bins[c]), itemStyle: { color: '#3b82f6' }, barCategoryGap: '10%' }],
+        animationDuration: 300,
+      };
+    }
+
     const seriesData = points.map((p) => {
       const xv = xIsNumeric ? toNumber(p.x) : String(p.x);
       return [xv, p.y];
     });
+
+    const seriesType = chartType === 'scatter' ? 'scatter' : chartType;
 
     return {
       backgroundColor: 'transparent',
@@ -70,9 +101,10 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType }: DatasetChart
       series: [
         {
           name: yColumn,
-          type: chartType,
+          type: seriesType,
           data: seriesData,
-          showSymbol: chartType === 'line' ? points.length <= 60 : false,
+          showSymbol: chartType === 'line' ? points.length <= 60 : chartType === 'scatter' ? true : false,
+          symbolSize: chartType === 'scatter' ? 10 : undefined,
           sampling: 'lttb',
           smooth: chartType === 'line',
           itemStyle: { color: '#3b82f6' },
@@ -82,7 +114,7 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType }: DatasetChart
       ],
       animationDuration: 300,
     };
-  }, [points, xIsNumeric, xColumn, yColumn, chartType, theme]);
+  }, [points, xIsNumeric, xColumn, yColumn, chartType, isHistogram, theme]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -105,7 +137,7 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType }: DatasetChart
   return (
     <div
       ref={chartRef}
-      style={{ width: '100%', height: '420px' }}
+      style={{ width: '100%', height: `${height}px` }}
       role="img"
       aria-label={`${chartType} chart of ${yColumn} by ${xColumn}`}
     />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense, useMemo } from 'react';
+import React, { useState, Suspense, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useDataset, useDatasetRows, type DatasetSummary } from '@/hooks/use-api';
@@ -102,13 +102,31 @@ function DatasetViewContent() {
 
   const [yColumn, setYColumn] = useState<string>('');
   const [xColumn, setXColumn] = useState<string>('');
-  const [chartType, setChartType] = useState<'line' | 'bar'>('line');
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'scatter' | 'histogram'>('line');
 
   // Formula state
   const [formula, setFormula] = useState('');
   const [calcName, setCalcName] = useState('calculated');
   const [calcError, setCalcError] = useState('');
   const [calcCol, setCalcCol] = useState<string | null>(null);
+
+  const [showData, setShowData] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const chartWrapRef = React.useRef<HTMLDivElement>(null);
+  const toggleFullscreen = () => {
+    const el = chartWrapRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  };
+  useEffect(() => {
+    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
 
   const effectiveY = yColumn || numberCols[0] || allCols[1] || allCols[0] || '';
   const effectiveX = xColumn || allCols[0] || '';
@@ -194,17 +212,32 @@ function DatasetViewContent() {
                 onChange={(v) => setXColumn(v)}
                 options={allCols.map((c) => ({ value: c, label: c }))}
               />
+              {chartType !== 'histogram' && (
               <CustomSelect
                 label="Y axis (numeric)"
                 value={effectiveY}
                 onChange={(v) => setYColumn(v)}
                 options={(numberCols.length ? numberCols : allCols).map((c) => ({ value: c, label: c }))}
               />
+              )}
+              {chartType === 'histogram' && (
+                <CustomSelect
+                  label="Column to bin"
+                  value={effectiveY}
+                  onChange={(v) => setYColumn(v)}
+                  options={(numberCols.length ? numberCols : allCols).map((c) => ({ value: c, label: c }))}
+                />
+              )}
               <CustomSelect
                 label="Chart type"
                 value={chartType}
-                onChange={(v) => setChartType(v as 'line' | 'bar')}
-                options={[{ value: 'line', label: 'Line' }, { value: 'bar', label: 'Bar' }]}
+                onChange={(v) => setChartType(v as 'line' | 'bar' | 'scatter' | 'histogram')}
+                options={[
+                  { value: 'line', label: 'Line' },
+                  { value: 'bar', label: 'Bar' },
+                  { value: 'scatter', label: 'Scatter' },
+                  { value: 'histogram', label: 'Histogram' },
+                ]}
               />
               <div className="flex items-end">
                 <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setXColumn(''); setYColumn(''); }}>
@@ -291,18 +324,104 @@ function DatasetViewContent() {
         </Card>
 
         <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Visualization</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Visualization</h2>
+            <div className="flex items-center gap-2">
+              {numberCols[0] && (() => {
+                const numCol = numberCols[0];
+                const vals = (rows || []).map((r) => toNumber(r[numCol])).filter((v) => !isNaN(v));
+                const total = vals.reduce((s, v) => s + v, 0);
+                const avg = vals.length ? total / vals.length : NaN;
+                return (
+                  <div className="hidden sm:flex items-center gap-4 text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Total {numCol}: <span className="font-semibold text-slate-800 dark:text-slate-100">{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></span>
+                    <span className="text-gray-500 dark:text-gray-400">Avg: <span className="font-semibold text-slate-800 dark:text-slate-100">{isNaN(avg) ? '—' : avg.toFixed(2)}</span></span>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
           {isLoading ? (
             <div className="flex justify-center py-12"><LoadingSpinner size="lg" /></div>
           ) : rowsError ? (
             <p className="text-red-600">Failed to load rows: {rowsError.message}</p>
           ) : (
-            <DatasetChart
-              rows={displayRows || []}
-              xColumn={calcCol && effectiveX === calcCol ? effectiveX : effectiveX}
-              yColumn={calcCol || effectiveY}
-              chartType={chartType}
-            />
+            <div ref={chartWrapRef} className="relative">
+              <DatasetChart
+                rows={displayRows || []}
+                xColumn={calcCol && effectiveX === calcCol ? effectiveX : effectiveX}
+                yColumn={calcCol || effectiveY}
+                chartType={chartType}
+                height={isFullscreen ? Math.max(420, (typeof window !== 'undefined' ? window.innerHeight - 160 : 480)) : 420}
+              />
+              {/* Floating control cluster (matches the requested feature) */}
+              <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowData((v) => !v)}
+                  className="rounded-full bg-slate-700/90 hover:bg-slate-600 text-white text-sm px-4 py-2 shadow-lg backdrop-blur"
+                >
+                  {showData ? 'Hide data' : 'Show data'}
+                </button>
+                <div className="flex items-center gap-1 rounded-lg bg-slate-800/90 p-1 shadow-lg backdrop-blur">
+                  <button
+                    type="button"
+                    onClick={() => setShowData((v) => !v)}
+                    aria-label="Toggle data table"
+                    title="Toggle data table"
+                    className={`p-2 rounded ${showData ? 'bg-blue-600 text-white' : 'text-gray-200 hover:bg-slate-700'}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    aria-label="Toggle fullscreen"
+                    title="Toggle fullscreen"
+                    className="p-2 rounded text-gray-200 hover:bg-slate-700"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {showData && (
+            <div className="mt-4">
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-600">
+                      {(() => {
+                        const cols = calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols;
+                        return cols.map((c) => (
+                          <th key={c} className="px-3 py-2 font-medium whitespace-nowrap">{c}</th>
+                        ));
+                      })()}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(displayRows || []).slice(0, 100).map((r, i) => {
+                      const cols = calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols;
+                      return (
+                        <tr key={i} className="border-b border-gray-100 dark:border-slate-700">
+                          {cols.map((c) => (
+                            <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-slate-300">{String(r[c] ?? '')}</td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {displayRows && displayRows.length > 100 && (
+                <p className="text-xs text-gray-400 mt-2">Showing first 100 of {displayRows.length} rows.</p>
+              )}
+            </div>
           )}
         </Card>
 
