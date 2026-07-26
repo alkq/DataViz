@@ -117,21 +117,39 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
     };
   }, [points, xIsNumeric, xColumn, yColumn, chartType, isHistogram, theme]);
 
+  // Init the chart once per theme/onChartReady. Resize + option updates are
+  // handled by the effect below so fullscreen/height changes re-render correctly.
   useEffect(() => {
     if (!chartRef.current) return;
     const chart = echarts.init(chartRef.current, theme);
     chartInstanceRef.current = chart;
     onChartReady?.(chart);
     chart.setOption(chartOptions);
-    const handleResize = () => chartInstanceRef.current?.resize();
+
+    // Resize on WINDOW resize AND on container-size changes (e.g. exiting
+    // fullscreen resizes the element without firing a window resize event).
+    const handleResize = () => chart.resize();
     window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(() => chart.resize());
+    ro.observe(chartRef.current);
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      ro.disconnect();
       onChartReady?.(null);
-      chartInstanceRef.current?.dispose();
+      chart.dispose();
       chartInstanceRef.current = null;
     };
-  }, [chartOptions, theme, onChartReady]);
+  }, [theme, onChartReady]);
+
+  // Re-apply option + resize whenever the data/type/height changes (incl.
+  // fullscreen toggling the height prop).
+  useEffect(() => {
+    const chart = chartInstanceRef.current;
+    if (!chart) return;
+    chart.setOption(chartOptions, true);
+    chart.resize();
+  }, [chartOptions, height]);
 
   if (points.length === 0) {
     return <div className="text-center text-gray-500 py-12">No numeric data to plot for the selected columns.</div>;
