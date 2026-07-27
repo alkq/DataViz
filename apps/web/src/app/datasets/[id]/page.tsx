@@ -107,7 +107,7 @@ function DatasetViewContent() {
 
   const [yColumn, setYColumn] = useState<string>('');
   const [xColumn, setXColumn] = useState<string>('');
-  const [chartType, setChartType] = useState<'line' | 'bar' | 'scatter' | 'histogram'>('line');
+  const [chartType, setChartType] = useState<'line' | 'area' | 'bar' | 'scatter' | 'histogram' | 'pie' | 'radar' | 'composed'>('line');
 
   // Formula state
   const [formula, setFormula] = useState('');
@@ -293,9 +293,9 @@ function DatasetViewContent() {
                 onChange={(v) => setXColumn(v)}
                 options={allCols.map((c) => ({ value: c, label: c }))}
               />
-              {chartType !== 'histogram' && (
+              {chartType !== 'histogram' && chartType !== 'pie' && chartType !== 'radar' && (
               <CustomSelect
-                label="Y axis (numeric)"
+                label={chartType === 'composed' ? 'Y axis (numeric, bar+line)' : 'Y axis (numeric)'}
                 value={effectiveY}
                 onChange={(v) => setYColumn(v)}
                 options={(numberCols.length ? numberCols : allCols).map((c) => ({ value: c, label: c }))}
@@ -312,12 +312,16 @@ function DatasetViewContent() {
               <CustomSelect
                 label="Chart type"
                 value={chartType}
-                onChange={(v) => setChartType(v as 'line' | 'bar' | 'scatter' | 'histogram')}
+                onChange={(v) => setChartType(v as 'line' | 'area' | 'bar' | 'scatter' | 'histogram' | 'pie' | 'radar' | 'composed')}
                 options={[
                   { value: 'line', label: 'Line' },
+                  { value: 'area', label: 'Area' },
                   { value: 'bar', label: 'Bar' },
                   { value: 'scatter', label: 'Scatter' },
                   { value: 'histogram', label: 'Histogram' },
+                  { value: 'pie', label: 'Pie' },
+                  { value: 'radar', label: 'Radar' },
+                  { value: 'composed', label: 'Composed' },
                 ]}
               />
               <div className="flex items-end">
