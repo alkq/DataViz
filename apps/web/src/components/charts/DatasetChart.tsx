@@ -25,6 +25,8 @@ interface DatasetChartProps {
   chartType: ChartType;
   height?: number;
   onChartReady?: (chart: echarts.ECharts | null) => void;
+  // Expose the plotted [x, y] pairs so the parent can export them to CSV.
+  onPlottedData?: (data: { x: unknown; y: number }[]) => void;
 }
 
 function toNumber(v: unknown): number {
@@ -36,7 +38,7 @@ function toNumber(v: unknown): number {
 // Stable color palette (Bklit-ish blues/teals/violets).
 const PALETTE = ['#3b82f6', '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#6366f1', '#14b8a6'];
 
-export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, onChartReady }: DatasetChartProps) {
+export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, onChartReady, onPlottedData }: DatasetChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<echarts.ECharts | null>(null);
   const { theme = 'light' } = useTheme();
@@ -54,6 +56,11 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
     return { points: pts, xIsNumeric: numericX };
   }, [rows, xColumn, yColumn, isHistogram]);
 
+  // Expose plotted [x, y] pairs for CSV export (chart + graph data).
+  useEffect(() => {
+    onPlottedData?.(points.map((p) => ({ x: p.x, y: isNaN(p.y) ? 0 : p.y })));
+  }, [points, onPlottedData]);
+
   const chartOptions = useMemo(() => {
     const isDark = theme === 'dark';
     const textColor = isDark ? '#e2e8f0' : '#475569';
@@ -61,6 +68,8 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
     const axisColor = isDark ? '#64748b' : '#94a3b8';
     const legendColor = isDark ? '#cbd5e1' : '#475569';
     const baseTooltip = { trigger: 'axis', backgroundColor: isDark ? '#1e293b' : '#fff', borderColor: gridColor, textStyle: { color: textColor } };
+    // Smooth morphing when the type / axes change.
+    const TRANS = { animationDurationUpdate: 600, animationEasingUpdate: 'cubicInOut' };
 
     // ---- HISTOGRAM: bin a single numeric column ----
     if (isHistogram) {
@@ -82,8 +91,9 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
         grid: { left: 70, right: 30, top: 20, bottom: 70 },
         xAxis: { type: 'category', data: cats, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 10, rotate: cats.length > 8 ? 30 : 0, hideOverlap: true }, name: xColumn, nameLocation: 'middle', nameGap: 38, nameTextStyle: { color: textColor } },
         yAxis: { type: 'value', axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }, name: 'Count', nameTextStyle: { color: textColor } },
-        series: [{ name: 'Count', type: 'bar', data: cats.map((c) => bins[c]), itemStyle: { color: '#3b82f6' }, barCategoryGap: '10%' }],
+        series: [{ name: 'Count', type: 'bar', data: cats.map((c) => bins[c]), itemStyle: { color: '#3b82f6' }, barCategoryGap: '10%', universalTransition: { enabled: true }, seriesId: 'hist' }],
         animationDuration: 300,
+        ...TRANS,
       };
     }
 
@@ -100,8 +110,9 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
         color: PALETTE,
         tooltip: { trigger: 'item', backgroundColor: isDark ? '#1e293b' : '#fff', borderColor: gridColor, textStyle: { color: textColor }, formatter: '{b}: {c} ({d}%)' },
         legend: { bottom: 0, textStyle: { color: legendColor }, type: 'scroll' },
-        series: [{ name: yColumn, type: 'pie', radius: ['38%', '68%'], center: ['50%', '46%'], data: pieData, label: { color: textColor }, itemStyle: { borderColor: isDark ? '#0f172a' : '#fff', borderWidth: 2 } }],
+        series: [{ name: yColumn, type: 'pie', radius: ['38%', '68%'], center: ['50%', '46%'], data: pieData, label: { color: textColor }, itemStyle: { borderColor: isDark ? '#0f172a' : '#fff', borderWidth: 2 }, universalTransition: { enabled: true }, seriesId: 'pie' }],
         animationDuration: 300,
+        ...TRANS,
       };
     }
 
@@ -121,8 +132,9 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
           splitArea: { areaStyle: { color: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.05)' } },
           axisLine: { lineStyle: { color: gridColor } },
         },
-        series: [{ type: 'radar', data: [{ value: cats.map((c) => { const hit = points.find((p) => String(p.x) === c); return hit ? (isNaN(hit.y) ? 0 : hit.y) : 0; }), name: yColumn, areaStyle: { opacity: 0.25 } }] }],
+        series: [{ type: 'radar', data: [{ value: cats.map((c) => { const hit = points.find((p) => String(p.x) === c); return hit ? (isNaN(hit.y) ? 0 : hit.y) : 0; }), name: yColumn, areaStyle: { opacity: 0.25 } }], universalTransition: { enabled: true }, seriesId: 'radar' }],
         animationDuration: 300,
+        ...TRANS,
       };
     }
 
@@ -135,28 +147,30 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
     const seriesType: 'line' | 'bar' | 'scatter' =
       chartType === 'scatter' ? 'scatter' : chartType === 'bar' ? 'bar' : 'line';
 
-    // Composed = line + bar overlay (Bklit "composed" style) when both make sense.
-    const series =
-      chartType === 'composed'
-        ? [
-            { name: yColumn + ' (bar)', type: 'bar', data: seriesData, itemStyle: { color: 'rgba(59,130,246,0.55)' } },
-            { name: yColumn + ' (line)', type: 'line', data: seriesData, smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { color: '#06b6d4', width: 2 }, itemStyle: { color: '#06b6d4' } },
-          ]
-        : [
-            {
-              name: yColumn,
-              type: seriesType,
-              data: seriesData,
-              showSymbol: chartType === 'line' || chartType === 'area' ? points.length <= 60 : chartType === 'scatter' ? true : false,
-              symbolSize: chartType === 'scatter' ? 10 : undefined,
-              sampling: 'lttb',
-              smooth: chartType === 'line' || chartType === 'area',
-              itemStyle: { color: '#3b82f6' },
-              lineStyle: { color: '#3b82f6', width: 2 },
-              areaStyle: chartType === 'area' ? { color: isDark ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.12)' } : undefined,
-            },
-          ];
-
+    // Composed = line + bar overlay. Build ONE array (no ternary-of-arrays,
+    // which trips TS1136 in this tsconfig).
+    const series: any[] = [];
+    if (chartType === 'composed') {
+      series.push(
+        { name: yColumn + ' (bar)', type: 'bar', data: seriesData, itemStyle: { color: 'rgba(59,130,246,0.55)' } },
+        { name: yColumn + ' (line)', type: 'line', data: seriesData, smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { color: '#06b6d4', width: 2 }, itemStyle: { color: '#06b6d4' } },
+      );
+    } else {
+      series.push({
+        name: yColumn,
+        type: seriesType,
+        data: seriesData,
+        showSymbol: chartType === 'line' || chartType === 'area' ? points.length <= 60 : chartType === 'scatter' ? true : false,
+        symbolSize: chartType === 'scatter' ? 10 : undefined,
+        sampling: 'lttb',
+        smooth: chartType === 'line' || chartType === 'area',
+        itemStyle: { color: '#3b82f6' },
+        lineStyle: { color: '#3b82f6', width: 2 },
+        areaStyle: chartType === 'area' ? { color: isDark ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.12)' } : undefined,
+        universalTransition: { enabled: true },
+        seriesId: 'main-' + chartType,
+      });
+    }
     return {
       backgroundColor: 'transparent',
       tooltip: baseTooltip,
@@ -183,6 +197,7 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
       },
       series,
       animationDuration: 300,
+      ...TRANS,
     };
   }, [points, xIsNumeric, xColumn, yColumn, chartType, isHistogram, isPie, isRadar, theme]);
 
@@ -193,7 +208,7 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
     const chart = echarts.init(chartRef.current, theme);
     chartInstanceRef.current = chart;
     onChartReady?.(chart);
-    chart.setOption(chartOptions);
+    chart.setOption(chartOptions as any);
 
     const handleResize = () => chart.resize();
     window.addEventListener('resize', handleResize);
@@ -213,7 +228,7 @@ export function DatasetChart({ rows, xColumn, yColumn, chartType, height = 420, 
   useEffect(() => {
     const chart = chartInstanceRef.current;
     if (!chart) return;
-    chart.setOption(chartOptions, true);
+    chart.setOption(chartOptions as any, true);
     chart.resize();
   }, [chartOptions, height]);
 

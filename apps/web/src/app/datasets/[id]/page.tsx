@@ -175,6 +175,32 @@ function DatasetViewContent() {
     setMenuOpen(false);
   };
 
+  // Export the rows AND the chart's plotted [x, y] series (the "graph" data).
+  const exportCsvWithChart = () => {
+    const cols = dataset?.columns.map((c) => c.name) || [];
+    const escape = (v: unknown) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rowLines = (displayRows || []).map((r) => cols.map((c) => escape(r[c])).join(','));
+    const lines = [`# Dataset: ${dataset?.name || ''}`, `# Columns: ${cols.join(' | ')}`, cols.join(','), ...rowLines];
+    // Append the plotted chart series (x = current X axis, y = current Y axis).
+    if (chartData.length > 0) {
+      lines.push('', '# --- Chart series ---', `# Type: ${chartType}, X: ${effectiveX}, Y: ${effectiveY}`);
+      lines.push(`${effectiveX},${effectiveY}`);
+      for (const p of chartData) lines.push(`${escape(p.x)},${isNaN(p.y) ? '' : p.y}`);
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${dataset?.name?.replace(/\.[^.]+$/, '') || 'dataset'}_with_chart.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const toggleFullscreen = () => {
     const el = chartWrapRef.current;
     if (!el) return;
@@ -195,6 +221,9 @@ function DatasetViewContent() {
 
   const effectiveY = yColumn || numberCols[0] || allCols[1] || allCols[0] || '';
   const effectiveX = xColumn || allCols[0] || '';
+
+  // Plotted [x, y] pairs from the main chart, for CSV export (chart + graph data).
+  const [chartData, setChartData] = useState<{ x: unknown; y: number }[]>([]);
 
   // Build computed rows when a formula is valid.
   const computedRows = useMemo<Row[]>(() => {
@@ -471,6 +500,7 @@ function DatasetViewContent() {
                 chartType={chartType}
                 height={isFullscreen ? Math.max(420, (typeof window !== 'undefined' ? window.innerHeight - 160 : 480)) : 420}
                 onChartReady={setChartInstance}
+                onPlottedData={setChartData}
               />
               {/* Floating control cluster (matches the requested feature) */}
               <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-2">
@@ -586,6 +616,7 @@ function DatasetViewContent() {
                     <div className="absolute right-0 mt-1 z-30 w-48 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl py-1 text-sm">
                       <button type="button" onClick={() => exportChart('png')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as PNG</button>
                       <button type="button" onClick={() => exportChart('svg')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as SVG</button>
+                      <button type="button" onClick={() => { exportCsvWithChart(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Export CSV + chart data</button>
                       <button type="button" onClick={() => { setSourceOpen(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">View Source</button>
                     </div>
                   )}
