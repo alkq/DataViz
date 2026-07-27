@@ -135,6 +135,8 @@ function DatasetViewContent() {
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
   const [colMenu, setColMenu] = useState<string | null>(null);
   const [visOpen, setVisOpen] = useState(false);
+  const [csvStatus, setCsvStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
+  const [csvMsg, setCsvMsg] = useState('');
 
   const visibleCols = useMemo(
     () => (calcCol && !allCols.includes(calcCol) ? [...allCols, calcCol] : allCols).filter((c) => !hiddenCols.has(c)),
@@ -146,12 +148,15 @@ function DatasetViewContent() {
     else { setSortCol(c); setSortDir('asc'); }
   };
 
-  const exportCsvFromRows = (rowsToExport: Record<string, unknown>[], cols: string[], filename: string) => {
+  const buildCsvFromRows = (rowsToExport: Record<string, unknown>[], cols: string[]) => {
     const escape = (v: unknown) => {
       const s = v === null || v === undefined ? '' : String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const csv = [cols.join(','), ...rowsToExport.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
+    return [cols.join(','), ...rowsToExport.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
+  };
+
+  const triggerCsvDownload = (csv: string, filename: string) => {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -175,30 +180,44 @@ function DatasetViewContent() {
     setMenuOpen(false);
   };
 
-  // Export the rows AND the chart's plotted [x, y] series (the "graph" data).
-  const exportCsvWithChart = () => {
-    const cols = dataset?.columns.map((c) => c.name) || [];
-    const escape = (v: unknown) => {
-      const s = v === null || v === undefined ? '' : String(v);
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const rowLines = (displayRows || []).map((r) => cols.map((c) => escape(r[c])).join(','));
-    const lines = [`# Dataset: ${dataset?.name || ''}`, `# Columns: ${cols.join(' | ')}`, cols.join(','), ...rowLines];
-    // Append the plotted chart series (x = current X axis, y = current Y axis).
-    if (chartData.length > 0) {
-      lines.push('', '# --- Chart series ---', `# Type: ${chartType}, X: ${effectiveX}, Y: ${effectiveY}`);
-      lines.push(`${effectiveX},${effectiveY}`);
-      for (const p of chartData) lines.push(`${escape(p.x)},${isNaN(p.y) ? '' : p.y}`);
+  // Unified CSV exporter with button feedback (idle → working → done/error).
+  // CSV = data only. Charts/images are exported separately as PNG/SVG via the ⋯ menu.
+  const runExport = async (buildCsv: () => string | Promise<string>, filename: string, label: string) => {
+    setCsvStatus('working');
+    setCsvMsg('');
+    try {
+      const csv = await buildCsv();
+      triggerCsvDownload(csv, filename);
+      setCsvStatus('done');
+      setCsvMsg(`${label} exported`);
+    } catch {
+      setCsvStatus('error');
+      setCsvMsg('Export failed — try again');
     }
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${dataset?.name?.replace(/\.[^.]+$/, '') || 'dataset'}_with_chart.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => {
+      setCsvStatus('idle');
+      setCsvMsg('');
+    }, 2600);
+  };
+
+  // Build the rows+chart-series CSV (the "graph" data lives in the appended section).
+  const buildCsvWithChart = () => {
+    const cols = dataset?.columns.map((c) => c.name) || [];
+    const lines = [
+      `# Dataset: ${dataset?.name || ''}`,
+      `# Columns: ${cols.join(' | ')}`,
+      cols.join(','),
+      ...(displayRows || []).map((r) => cols.map((c) => {
+        const s = r[c] == null ? '' : String(r[c]);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      }).join(',')),
+    ];
+    if (chartData.length > 0) {
+      lines.push('', '# --- Chart series (graph data) ---', `# Type: ${chartType}, X: ${effectiveX}, Y: ${effectiveY}`);
+      lines.push(`${effectiveX},${effectiveY}`);
+      for (const p of chartData) lines.push(`${p.x == null ? '' : p.x},${isNaN(p.y) ? '' : p.y}`);
+    }
+    return lines.join('\n');
   };
 
   const toggleFullscreen = () => {
@@ -281,32 +300,6 @@ function DatasetViewContent() {
     return rowsArr;
   }, [displayRows, search, sortCol, sortDir, visibleCols]);
 
-  const downloadCsv = async () => {
-    if (!dataset || !id) return;
-    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-    const token = useAuthStore.getState().accessToken;
-    const res = await fetch(`${base}/datasets/${id}/rows?limit=1000&offset=0`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) return;
-    const dataRows: Record<string, unknown>[] = await res.json();
-    const cols = dataset.columns.map((c) => c.name);
-    const escape = (v: unknown) => {
-      const s = v === null || v === undefined ? '' : String(v);
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const csv = [cols.join(','), ...dataRows.map((r) => cols.map((c) => escape(r[c])).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${dataset.name.replace(/\.[^.]+$/, '')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -324,8 +317,55 @@ function DatasetViewContent() {
               {dataset?.row_count} rows · {dataset?.columns.length} columns · {dataset?.source_type.toUpperCase()}
             </p>
           </div>
-          <Tooltip content="Download all rows as a CSV file.">
-            <Button variant="secondary" onClick={downloadCsv} className="shrink-0">Export CSV</Button>
+          <Tooltip content="Download all rows as a CSV file (data only — export the chart image via ⋯ → Save PNG/SVG).">
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                variant="secondary"
+                disabled={csvStatus === 'working'}
+                onClick={() =>
+                  runExport(
+                    async () => {
+                      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+                      const token = useAuthStore.getState().accessToken;
+                      const res = await fetch(`${base}/datasets/${id}/rows?limit=1000&offset=0`, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                      });
+                      if (!res.ok) throw new Error('fetch failed');
+                      const dataRows: Record<string, unknown>[] = await res.json();
+                      const cols = dataset?.columns.map((c) => c.name) || [];
+                      return buildCsvFromRows(dataRows, cols);
+                    },
+                    `${dataset?.name?.replace(/\.[^.]+$/, '') || 'dataset'}.csv`,
+                    'Rows',
+                  )
+                }
+                className="shrink-0 flex items-center gap-2"
+              >
+                {csvStatus === 'working' ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Exporting…
+                  </>
+                ) : csvStatus === 'done' ? (
+                  <>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Saved
+                  </>
+                ) : csvStatus === 'error' ? (
+                  'Export failed'
+                ) : (
+                  'Export CSV'
+                )}
+              </Button>
+              {csvStatus !== 'idle' && csvMsg && (
+                <span className={`text-xs ${csvStatus === 'error' ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>{csvMsg}</span>
+              )}
+            </div>
           </Tooltip>
         </div>
 
@@ -597,11 +637,16 @@ function DatasetViewContent() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => exportCsvFromRows(tableRows, visibleCols, `${dataset?.name?.replace(/\.[^.]+$/, '') || 'dataset'}.csv`)}
-                  className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-1"
+                  disabled={csvStatus === 'working'}
+                  onClick={() => runExport(() => buildCsvFromRows(tableRows, visibleCols), `${dataset?.name?.replace(/\.[^.]+$/, '') || 'dataset'}.csv`, 'Table')}
+                  className={`text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-1 disabled:opacity-60 ${csvStatus === 'done' ? 'border-green-500 text-green-600' : ''}`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-                  Download CSV
+                  {csvStatus === 'working' ? (
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+                  )}
+                  {csvStatus === 'working' ? 'Exporting…' : csvStatus === 'done' ? 'Saved' : 'Download CSV'}
                 </button>
                 <div className="relative">
                   <button
@@ -614,9 +659,10 @@ function DatasetViewContent() {
                   </button>
                   {menuOpen && (
                     <div className="absolute right-0 mt-1 z-30 w-48 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl py-1 text-sm">
-                      <button type="button" onClick={() => exportChart('png')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as PNG</button>
-                      <button type="button" onClick={() => exportChart('svg')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as SVG</button>
-                      <button type="button" onClick={() => { exportCsvWithChart(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Export CSV + chart data</button>
+                      <button type="button" onClick={() => exportChart('png')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as PNG (chart image)</button>
+                      <button type="button" onClick={() => exportChart('svg')} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Save as SVG (chart image)</button>
+                      <button type="button" onClick={() => { runExport(() => buildCsvWithChart(), `${dataset?.name?.replace(/\.[^.]+$/, '') || 'dataset'}_with_chart.csv`, 'Chart data'); setMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">Export CSV + chart data</button>
+                      <div className="px-3 py-1.5 text-[11px] text-gray-400 border-t border-gray-100 dark:border-slate-700">CSV = data only. Charts export as PNG/SVG above.</div>
                       <button type="button" onClick={() => { setSourceOpen(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200">View Source</button>
                     </div>
                   )}
