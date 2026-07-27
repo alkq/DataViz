@@ -5,7 +5,7 @@ import type * as echarts from 'echarts';
 import { useTheme } from 'next-themes';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useDataset, useDatasetRows, type DatasetSummary } from '@/hooks/use-api';
+import { useDataset, useDatasetRows, useDatasets, type DatasetSummary } from '@/hooks/use-api';
 import { warmUpApi } from '@/lib/keepalive';
 import { Header } from '@/components/ui/Header';
 import { Card, Button, LoadingSpinner } from '@/components/ui/common';
@@ -98,6 +98,12 @@ function DatasetViewContent() {
   const id = typeof params.id === 'string' ? params.id : Array.isArray(params.id) ? params.id[0] : '';
   const { data: dataset } = useDataset(id);
   const { data: rows, error: rowsError, isLoading } = useDatasetRows(id, 500, 0);
+
+  // (4) Compare with another dataset: overlay its first numeric column.
+  const [compareId, setCompareId] = useState<string>('');
+  const { data: compareRows, error: compareError } = useDatasetRows(compareId, 500, 0);
+  const { data: compareMeta } = useDataset(compareId);
+  const { data: allDatasets } = useDatasets();
 
   const numberCols = useMemo(
     () => (dataset?.columns || []).filter((c) => c.type === 'number').map((c) => c.name),
@@ -216,6 +222,16 @@ function DatasetViewContent() {
 
   const displayRows = formula.trim() ? computedRows : rows;
 
+  // Comparison dataset: auto-pick first text col as X, first numeric as Y.
+  const compareSeries = React.useMemo(() => {
+    if (!compareId || !compareRows || !compareMeta) return null;
+    const cols = compareMeta.columns || [];
+    const xc = cols.find((c) => c.type !== 'number')?.name || cols[0]?.name;
+    const yc = cols.find((c) => c.type === 'number')?.name;
+    if (!xc || !yc) return null;
+    return { xColumn: xc, yColumn: yc, rows: compareRows, name: compareMeta.name };
+  }, [compareId, compareRows, compareMeta]);
+
   const tableRows = React.useMemo(() => {
     let rowsArr = displayRows || [];
     if (search.trim()) {
@@ -325,10 +341,17 @@ function DatasetViewContent() {
                 ]}
               />
               <div className="flex items-end">
-                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setXColumn(''); setYColumn(''); }}>
-                  Reset
-                </Button>
+                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => { setXColumn(''); setYColumn(''); }}>Reset</Button>
               </div>
+              <CustomSelect
+                label="Compare with"
+                value={compareId}
+                onChange={(v) => setCompareId(v)}
+                options={[
+                  { value: '', label: 'None' },
+                  ...(allDatasets || []).filter((d) => d.id !== id).map((d) => ({ value: d.id, label: d.name })),
+                ]}
+              />
             </div>
           </Card>
         )}
@@ -627,6 +650,29 @@ function DatasetViewContent() {
             </div>
           )}
         </Card>
+
+        {/* (4) Comparison chart: overlay another dataset's first numeric column */}
+        {compareSeries && (
+          <Card className="mb-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                Comparison: <span className="text-blue-600 dark:text-blue-400">{compareSeries.name}</span>
+              </h2>
+              <Button variant="secondary" className="text-xs" onClick={() => setCompareId('')}>Clear</Button>
+            </div>
+            {compareError ? (
+              <p className="text-red-600 text-sm">Could not load comparison data.</p>
+            ) : (
+              <DatasetChart
+                rows={compareSeries.rows || []}
+                xColumn={compareSeries.xColumn}
+                yColumn={compareSeries.yColumn}
+                chartType={chartType === 'pie' || chartType === 'radar' || chartType === 'histogram' ? 'bar' : chartType}
+                height={360}
+              />
+            )}
+          </Card>
+        )}
 
         <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Data preview</h2>
